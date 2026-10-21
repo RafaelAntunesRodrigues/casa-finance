@@ -9,4 +9,6 @@ data/*.db-wal
 backups/*.db
 !backups/.gitkeep
 *.log
+logs/
+deploy/windows/current-tunnel-url.txt
 .DS_Store

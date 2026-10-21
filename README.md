@@ -116,68 +116,65 @@ O IP pode mudar após reiniciar o roteador. Para uso recorrente, você pode rese
 
 ---
 
-## 5. Deploy gratuito na internet (VM "Always Free")
+## 5. Deploy gratuito na internet (Cloudflare Tunnel, pelo seu PC)
 
-Por padrão este app foi desenhado para rodar só na rede local (ver seções 1-4). Esta seção documenta como colocá-lo no ar 24h, acessível de qualquer lugar, usando **apenas serviços com camada gratuita permanente** — sem mexer na arquitetura (continua Docker + SQLite).
+Por padrão este app foi desenhado para rodar só na rede local (ver seções 1-4). Esta seção documenta como colocá-lo acessível pela internet **sem custo e sem cartão de crédito**, usando o próprio PC como servidor e um [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) "Quick Tunnel" para expor a porta 3000 com HTTPS automático — sem abrir porta no roteador.
 
-### 5.1. Por que uma VM, e não um PaaS tipo Render/Railway/Fly.io
+### 5.1. Por que não uma VM na nuvem
 
-Em 2026, Render, Railway e Fly.io deixaram de oferecer disco persistente gratuito de forma permanente (free trial, ou sistema de arquivos efêmero). Como o SQLite depende de um arquivo persistente, essas opções fariam o banco sumir a cada redeploy/restart. Uma VM com camada "Always Free" (Google Cloud ou Oracle Cloud) resolve isso sem precisar trocar o banco de dados.
+Avaliamos hospedar em uma VM gratuita (Google Cloud/Oracle Cloud "Always Free"), mas tanto Google quanto Oracle exigem cartão de crédito com uma cobrança de verificação para ativar o faturamento, mesmo em camadas gratuitas — inviável para este caso. O Cloudflare Tunnel não exige cartão nem conta paga.
 
-### 5.2. Visão geral da arquitetura de produção
+### 5.2. Como funciona
 
 ```text
-Internet → DNS (DuckDNS, grátis) → IP público da VM
-                                          │
-                                   Caddy (HTTPS automático via Let's Encrypt)
-                                          │
-                                   App CasaFinance (container Docker)
-                                          │
-                                   SQLite em volume persistente (./data)
+Internet → Cloudflare (HTTPS automático) → cloudflared (rodando no seu PC)
+                                                   │
+                                          App CasaFinance (node, porta 3000)
+                                                   │
+                                          SQLite em ./data (no seu PC)
 ```
 
-O GitHub Actions builda a imagem Docker a cada `git push` na branch `master`, publica no GitHub Container Registry (GHCR, gratuito) e conecta via SSH na VM para atualizar os containers — sem nenhuma ação manual no dia a dia.
+Limitação aceita: por ser um "Quick Tunnel" (sem domínio próprio), a URL pública (`https://palavras-aleatorias.trycloudflare.com`) **muda toda vez que o túnel reinicia** (ex.: ao reiniciar o PC). Para sempre saber a URL atual, os scripts abaixo mantêm atualizado um [Gist privado](https://gist.github.com/RafaelAntunesRodrigues/712165cad8b383b06cf9bbc8936df14c) com o endereço vigente — basta abrir esse link (um favorito fixo) para pegar a URL do momento.
 
-### 5.3. Passo a passo (uma única vez)
+### 5.3. Configuração (uma única vez)
 
-**a) Criar a VM gratuita.** Recomendado: [Google Cloud "Always Free" e2-micro](https://cloud.google.com/free) (1 vCore compartilhada, 1 GB RAM, 30 GB de disco, região `us-west1`/`us-central1`/`us-east1` — suficiente para 2 usuários). Alternativa com mais capacidade, porém com relatos de instabilidade de disponibilidade: Oracle Cloud "Always Free" Ampere A1. Ao criar a VM:
-   - Escolha imagem Ubuntu (22.04/24.04 LTS).
-   - Reserve um **IP externo estático** (gratuito enquanto a VM estiver rodando).
-   - Libere as portas **22** (SSH), **80** e **443** (HTTP/HTTPS) no firewall.
-
-**b) Registrar um domínio grátis.** Crie uma conta em [duckdns.org](https://www.duckdns.org) e registre um subdomínio (ex.: `casafinance-rafael.duckdns.org`) apontando para o IP externo estático da VM.
-
-**c) Preparar a VM.** Via SSH, rode o script `deploy/setup-vm.sh` deste repositório (instala Docker e cria a pasta `~/casa-finance`), depois copie os arquivos de configuração do seu computador para a VM:
+Pré-requisitos já instalados neste ambiente: `node`, `cloudflared` (`winget install Cloudflare.cloudflared`) e `gh` (GitHub CLI, autenticado).
 
 ```powershell
-scp deploy/docker-compose.prod.yml usuario@IP-DA-VM:~/casa-finance/docker-compose.prod.yml
-scp deploy/Caddyfile               usuario@IP-DA-VM:~/casa-finance/Caddyfile
-scp deploy/.env.prod.example        usuario@IP-DA-VM:~/casa-finance/.env
+# 1. Instale as dependências e gere o build de produção (se ainda não fez)
+npm install
+npm run build
+
+# 2. Configure o .env (copie de .env.example se ainda não existir) e gere
+#    um SESSION_SECRET forte
+
+# 3. Crie os dois usuários iniciais (interativo, sem senha padrão no código)
+npm run create:users
+
+# 4. Registre a inicialização automática (pasta "Inicializar" do Windows,
+#    não precisa ser administrador)
+powershell -ExecutionPolicy Bypass -File deploy\windows\install-autostart.ps1
+
+# 5. Inicie agora, sem precisar logar de novo:
+wscript.exe "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\CasaFinance-App.vbs"
+wscript.exe "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\CasaFinance-Tunnel.vbs"
 ```
 
-Na VM, edite `~/casa-finance/.env` e preencha `SESSION_SECRET` (gere uma nova), `DOMAIN` (o subdomínio DuckDNS) e `GHCR_IMAGE` (ex.: `ghcr.io/seu-usuario/casa-finance`, tudo minúsculo).
+Depois disso:
+- O app e o túnel iniciam sozinhos (sem janela visível) sempre que você entrar no Windows.
+- Se qualquer um dos dois cair, reinicia sozinho em poucos segundos (loop de supervisão nos scripts).
+- A URL pública atual fica sempre em `deploy/windows/current-tunnel-url.txt` **e** no [Gist de status](https://gist.github.com/RafaelAntunesRodrigues/712165cad8b383b06cf9bbc8936df14c).
+- Logs em `logs/app.log` e `logs/tunnel.log` (não versionados).
 
-**d) Criar o repositório no GitHub** (se ainda não existir) e dar `git push` deste código para ele.
+Para desfazer a inicialização automática: `powershell -ExecutionPolicy Bypass -File deploy\windows\uninstall-autostart.ps1`.
 
-**e) Configurar o GitHub Actions** (Settings → Secrets and variables → Actions, no repositório):
-   - **Secrets:** `VM_HOST` (IP da VM), `VM_USER` (usuário SSH), `VM_SSH_KEY` (chave privada SSH com acesso à VM).
-   - **Variables:** `VM_CONFIGURED` = `true` (liga o passo de deploy automático do workflow).
+### 5.4. Atualizando o app depois de mudar o código
 
-**f) Primeiro deploy manual** (antes do primeiro `push` acionar o pipeline), direto na VM:
+Pare os processos (ou reinicie o PC), rode `npm run build` de novo e dispare os dois `.vbs` novamente (ou reinicie o PC, já que a inicialização automática cuida disso).
 
-```bash
-cd ~/casa-finance
-docker compose -f docker-compose.prod.yml up -d --pull always
-docker compose -f docker-compose.prod.yml exec app node scripts/create-users.js
-```
+### 5.5. Segurança ao ficar exposto à internet
 
-Acesse `https://SEU_DOMINIO` para confirmar.
-
-A partir daqui, qualquer `git push` para `master` builda, publica e redeploya sozinho via `.github/workflows/deploy.yml`.
-
-### 5.4. Segurança ao ficar exposto à internet
-
-Diferente do uso só em LAN, aqui a aplicação já inclui: cabeçalhos de segurança padrão (`helmet`), cookie de sessão `Secure` automático sob HTTPS, limite de requisições por IP (login e geral), HTTPS obrigatório via Caddy/Let's Encrypt. Ainda assim: use senhas fortes para os dois usuários, mantenha `SESSION_SECRET` em segredo e nunca reutilize as credenciais de outro serviço.
+Diferente do uso só em LAN, aqui a aplicação já inclui: cabeçalhos de segurança padrão (`helmet`), cookie de sessão `Secure` automático sob HTTPS (o Cloudflare Tunnel já entrega a conexão externa como HTTPS), limite de requisições por IP (login e geral). Ainda assim: use senhas fortes para os dois usuários, mantenha `SESSION_SECRET` em segredo, e lembre que o Gist com a URL atual é privado/não-listado mas acessível a quem tiver o link — não compartilhe esse link publicamente.
 
 ---
 
@@ -195,12 +192,6 @@ Via Docker (LAN):
 
 ```powershell
 docker compose exec casa-finance node scripts/backup.js
-```
-
-Via Docker (VM de produção):
-
-```bash
-docker compose -f docker-compose.prod.yml exec app node scripts/backup.js
 ```
 
 ### Restaurar um backup
@@ -251,8 +242,7 @@ casa-finance/
 │  │  └─ db/                # conexão SQLite, schema, sessão
 │  ├─ scripts/               # create-users, seed-categories, backup
 │  └─ tests/                 # testes automatizados (vitest + supertest)
-├─ deploy/                  # Caddyfile, compose de produção, setup-vm.sh (deploy na internet)
-├─ .github/workflows/        # CI/CD: build + push da imagem + deploy via SSH
+├─ deploy/windows/           # Cloudflare Tunnel + inicialização automática (ver seção 5)
 ├─ data/                    # banco SQLite (persistente, fora do controle de versão)
 ├─ backups/                 # backups gerados (persistente, fora do controle de versão)
 ├─ Dockerfile
@@ -305,8 +295,9 @@ A suíte cobre, entre outros pontos:
 6. **Endpoint adicional `GET /api/users`** (autenticado) — não estava no contrato original, mas é necessário para o filtro "usuário" da lista de movimentações (RF08) exibir nomes reais em vez de IDs.
 7. **CSV exportado com BOM UTF-8** — garante acentuação correta ao abrir no Excel no Windows.
 8. **Sem SPA "fake"**: toda a persistência é feita via API/SQLite; o frontend nunca usa `localStorage` como fonte de dados, apenas lê e grava via backend.
-9. **Deploy na internet via VM "Always Free" + Caddy + GHCR**, em vez de um PaaS tradicional (Render/Railway/Fly.io): pesquisa em 2026 mostrou que essas plataformas não oferecem mais disco persistente gratuito permanente, o que quebraria a persistência do SQLite a cada redeploy. A VM mantém a arquitetura 100% intacta; o Caddy cuida do HTTPS automático (Let's Encrypt) e o GitHub Actions builda/publica a imagem e redeploya via SSH a cada push — zero ação manual no dia a dia, ao custo de um setup inicial único (ver seção 5).
-10. **`helmet` + rate limit geral de API** adicionados especificamente para o cenário de exposição à internet (além do rate limit de login já existente), já que o modelo de ameaças muda de "rede local confiável" para "internet pública".
+9. **Deploy na internet via Cloudflare Tunnel (Quick Tunnel) rodando no próprio PC**, em vez de uma VM na nuvem: tanto Google Cloud quanto Oracle Cloud exigem cartão de crédito com cobrança de verificação mesmo nas camadas "Always Free", o que foi descartado. O Cloudflare Tunnel não exige cartão, não precisa de domínio próprio nem abertura de porta no roteador. Trade-off aceito: a URL pública muda a cada reinício do túnel (mitigado por manter a URL atual sempre em um Gist privado, ver seção 5).
+10. **`helmet` + rate limit geral de API** adicionados especificamente para o cenário de exposição à internet (além do rate limit de login já existente), já que o modelo de ameaças muda de "rede local confiável" para "internet pública". O cookie de sessão usa `secure: 'auto'`, que fica `Secure` automaticamente assim que a conexão chega via HTTPS (como acontece atrás do Cloudflare Tunnel).
+11. **Scripts de supervisão em PowerShell** (`deploy/windows/`) em vez de Tarefas Agendadas do Windows: a criação de Scheduled Tasks exigiu permissão de administrador neste ambiente, então a inicialização automática usa a pasta "Inicializar" do próprio usuário (`shell:startup`) com lançadores `.vbs` silenciosos — não precisa de privilégios elevados.
 
 ### Observação sobre dependências
 
