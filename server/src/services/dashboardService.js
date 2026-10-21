@@ -23,7 +23,8 @@ function sumByType(type, { upTo, start, end }) {
 export function getBalanceUpTo(date) {
   const income = sumByType('INCOME', { upTo: date });
   const expense = sumByType('EXPENSE', { upTo: date });
-  return income - expense;
+  const investment = sumByType('INVESTMENT', { upTo: date });
+  return income - expense - investment;
 }
 
 export function getDashboard(month) {
@@ -32,7 +33,8 @@ export function getDashboard(month) {
   const balanceCents = getBalanceUpTo(end);
   const incomeCents = sumByType('INCOME', { start, end });
   const expenseCents = sumByType('EXPENSE', { start, end });
-  const netCents = incomeCents - expenseCents;
+  const investmentCents = sumByType('INVESTMENT', { start, end });
+  const netCents = incomeCents - expenseCents - investmentCents;
 
   const expensesByCategory = db
     .prepare(
@@ -70,6 +72,7 @@ export function getDashboard(month) {
     balanceCents,
     incomeCents,
     expenseCents,
+    investmentCents,
     netCents,
     expensesByCategory,
     recentTransactions,

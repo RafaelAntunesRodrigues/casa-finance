@@ -40,6 +40,9 @@ export default function AppLayout() {
           <NavLink to="/categorias" className={({ isActive }) => `nav${isActive ? ' active' : ''}`}>
             ▦ <span>Categorias</span>
           </NavLink>
+          <NavLink to="/metas" className={({ isActive }) => `nav${isActive ? ' active' : ''}`}>
+            ◎ <span>Metas</span>
+          </NavLink>
         </nav>
         <button className="user-card" onClick={handleLogout} title="Sair">
           <div className="avatar">{initials(user?.name)}</div>
@@ -66,6 +69,10 @@ export default function AppLayout() {
         <NavLink to="/categorias" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
           <span className="icon">▦</span>
           <span>Categorias</span>
+        </NavLink>
+        <NavLink to="/metas" className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
+          <span className="icon">◎</span>
+          <span>Metas</span>
         </NavLink>
         <button className="bottom-nav-item" onClick={handleLogout}>
           <span className="icon">⏻</span>

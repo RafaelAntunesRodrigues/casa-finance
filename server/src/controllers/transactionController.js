@@ -61,8 +61,10 @@ export const exportCsv = asyncHandler(async (req, res) => {
   const header = ['Data', 'Tipo', 'Categoria', 'Descrição', 'Valor (R$)', 'Responsável'];
   const lines = [header.join(';')];
 
+  const TIPO_LABEL = { INCOME: 'Entrada', EXPENSE: 'Saída', INVESTMENT: 'Investimento' };
+
   for (const row of rows) {
-    const tipo = row.type === 'INCOME' ? 'Entrada' : 'Saída';
+    const tipo = TIPO_LABEL[row.type] || row.type;
     const valor = (row.amountCents / 100).toFixed(2).replace('.', ',');
     lines.push(
       [row.transactionDate, tipo, row.categoryName, row.description, valor, row.createdByName]

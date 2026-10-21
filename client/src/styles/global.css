@@ -8,6 +8,7 @@
   --brand2: #0f6d72;
   --in: #16845b;
   --out: #b64c43;
+  --inv: #2f6fb0;
   --soft: #e8f1f1;
   --shadow: 0 10px 28px rgba(30, 55, 64, 0.08);
 }
@@ -234,7 +235,7 @@ main {
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin: 18px 0;
 }
@@ -286,6 +287,11 @@ main {
   color: var(--brand2);
 }
 
+.stat-icon.inv {
+  background: #e8eff8;
+  color: var(--inv);
+}
+
 .quick-actions {
   display: flex;
   gap: 12px;
@@ -315,6 +321,12 @@ main {
 .btn.ghost {
   background: #f0f4f5;
   color: var(--ink);
+}
+
+.btn.invest {
+  background: #e8eff8;
+  color: var(--inv);
+  border: 1px solid #cddcee;
 }
 
 .btn.full-width {
@@ -428,6 +440,11 @@ main {
   color: var(--in);
 }
 
+.t-icon.investment {
+  background: #e8eff8;
+  color: var(--inv);
+}
+
 .t-main strong,
 .t-main span {
   display: block;
@@ -450,6 +467,10 @@ main {
 
 .amount.income {
   color: var(--in);
+}
+
+.amount.investment {
+  color: var(--inv);
 }
 
 /* ---------- Transactions page ---------- */
@@ -579,6 +600,105 @@ main {
   gap: 10px;
 }
 
+/* ---------- Metas ---------- */
+.field-hint {
+  display: block;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.goal-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.goal-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  background: white;
+}
+
+.goal-card.goal-off {
+  border-color: #f3d7d2;
+  background: #fffaf9;
+}
+
+.goal-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.goal-card-head strong {
+  display: block;
+  font-size: 15px;
+}
+
+.goal-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.goal-status {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  flex-shrink: 0;
+  background: #e5f5ee;
+  color: var(--in);
+}
+
+.goal-off .goal-status {
+  background: #faecea;
+  color: var(--out);
+}
+
+.goal-bar {
+  height: 10px;
+  border-radius: 20px;
+  background: #edf1f2;
+  overflow: hidden;
+}
+
+.goal-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #1d7c81, #80b8bb);
+  border-radius: 20px;
+}
+
+.goal-off .goal-bar i {
+  background: linear-gradient(90deg, var(--out), #e0948c);
+}
+
+.goal-numbers {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.goal-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
 /* ---------- Modal ---------- */
 .fab {
   display: none;
@@ -635,7 +755,7 @@ main {
 
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(var(--segments, 2), 1fr);
   background: #f0f4f5;
   border-radius: 12px;
   padding: 4px;
@@ -646,8 +766,9 @@ main {
   border: 0;
   background: transparent;
   border-radius: 9px;
-  padding: 10px;
+  padding: 10px 4px;
   font-weight: 800;
+  font-size: 13px;
   color: var(--muted);
   cursor: pointer;
 }
@@ -881,7 +1002,7 @@ main {
     grid-template-columns: 1fr;
   }
   .stat-grid {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -935,9 +1056,6 @@ main {
     padding: 14px;
     gap: 10px;
   }
-  .stat:nth-child(3) {
-    grid-column: 1 / -1;
-  }
   .stat strong {
     font-size: 16px;
   }
@@ -948,6 +1066,9 @@ main {
   .quick-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+  .quick-actions .btn.invest {
+    grid-column: 1 / -1;
   }
   .content-grid {
     display: block;
@@ -1001,7 +1122,7 @@ main {
     background: white;
     border-top: 1px solid var(--line);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     z-index: 15;
   }
 

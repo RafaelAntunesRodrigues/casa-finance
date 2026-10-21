@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import TransactionsPage from './pages/TransactionsPage.jsx';
 import CategoriesPage from './pages/CategoriesPage.jsx';
+import GoalsPage from './pages/GoalsPage.jsx';
 
 function FullScreenLoading() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="movimentacoes" element={<TransactionsPage />} />
         <Route path="categorias" element={<CategoriesPage />} />
+        <Route path="metas" element={<GoalsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

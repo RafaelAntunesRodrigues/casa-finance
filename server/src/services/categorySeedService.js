@@ -10,6 +10,7 @@ export const DEFAULT_CATEGORIES = [
   ['Documentação / taxas', 'EXPENSE'],
   ['Contas da casa', 'EXPENSE'],
   ['Decoração', 'EXPENSE'],
+  ['Investimentos', 'BOTH'],
   ['Outros', 'BOTH'],
 ];
 

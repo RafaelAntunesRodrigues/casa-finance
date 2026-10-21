@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS categories (
 
 CREATE TABLE IF NOT EXISTS transactions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  type TEXT NOT NULL CHECK (type IN ('INCOME', 'EXPENSE')),
+  type TEXT NOT NULL CHECK (type IN ('INCOME', 'EXPENSE', 'INVESTMENT')),
   amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
   category_id INTEGER NOT NULL,
   description TEXT NOT NULL CHECK (length(trim(description)) > 0),
@@ -41,3 +41,23 @@ CREATE INDEX IF NOT EXISTS idx_transactions_category_date
   ON transactions(category_id, transaction_date);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date
   ON transactions(created_by, transaction_date);
+
+-- Metas: alvo de economia (sem categoria) ou limite de gasto (com categoria).
+-- recurrence='MONTHLY' vale para todo mes; 'ONCE' vale so para o mes em
+-- que foi lancada (campo month, formato YYYY-MM).
+CREATE TABLE IF NOT EXISTS goals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+  target_cents INTEGER NOT NULL CHECK (target_cents > 0),
+  category_id INTEGER,
+  recurrence TEXT NOT NULL CHECK (recurrence IN ('MONTHLY', 'ONCE')),
+  month TEXT,
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  created_by INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (category_id) REFERENCES categories(id),
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_goals_month ON goals(month);

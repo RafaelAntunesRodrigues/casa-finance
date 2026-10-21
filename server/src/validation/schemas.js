@@ -7,7 +7,7 @@ export const loginSchema = z.object({
 });
 
 export const transactionInputSchema = z.object({
-  type: z.enum(['INCOME', 'EXPENSE'], { errorMap: () => ({ message: 'Tipo inválido' }) }),
+  type: z.enum(['INCOME', 'EXPENSE', 'INVESTMENT'], { errorMap: () => ({ message: 'Tipo inválido' }) }),
   amountCents: z
     .number({ invalid_type_error: 'Valor é obrigatório' })
     .int('Valor deve ser um inteiro de centavos')
@@ -21,7 +21,7 @@ export const transactionInputSchema = z.object({
 
 export const transactionQuerySchema = z.object({
   month: z.string().refine(isValidMonth, { message: 'Mês inválido, use YYYY-MM' }).optional(),
-  type: z.enum(['INCOME', 'EXPENSE']).optional(),
+  type: z.enum(['INCOME', 'EXPENSE', 'INVESTMENT']).optional(),
   categoryId: z.coerce.number().int().positive().optional(),
   createdBy: z.coerce.number().int().positive().optional(),
   q: z.string().trim().optional(),
@@ -43,6 +43,41 @@ export const categoryInputSchema = z.object({
 export const categoryUpdateSchema = categoryInputSchema.partial();
 
 export const categoryStatusSchema = z.object({
+  active: z.boolean({ invalid_type_error: 'active deve ser booleano' }),
+});
+
+export const goalInputSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Nome da meta é obrigatório'),
+    targetCents: z
+      .number({ invalid_type_error: 'Valor alvo é obrigatório' })
+      .int('Valor deve ser um inteiro de centavos')
+      .positive('Valor deve ser maior que zero'),
+    categoryId: z.number().int().positive().nullable().optional(),
+    recurrence: z.enum(['MONTHLY', 'ONCE'], {
+      errorMap: () => ({ message: 'Recorrência inválida' }),
+    }),
+    month: z
+      .string()
+      .refine(isValidMonth, { message: 'Mês inválido, use YYYY-MM' })
+      .nullable()
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.recurrence === 'ONCE' && !data.month) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['month'],
+        message: 'Informe o mês para metas que não se repetem',
+      });
+    }
+  });
+
+export const goalQuerySchema = z.object({
+  month: z.string().refine(isValidMonth, { message: 'Mês inválido, use YYYY-MM' }).optional(),
+});
+
+export const goalStatusSchema = z.object({
   active: z.boolean({ invalid_type_error: 'active deve ser booleano' }),
 });
 

@@ -1,5 +1,6 @@
 import { centsToBRL } from '../utils/money.js';
 import { formatDateBR } from '../utils/date.js';
+import { typeClass, typeSign } from '../utils/transactionType.js';
 import EmptyState from './EmptyState.jsx';
 
 export default function TransactionList({ items, onEdit, onDelete }) {
@@ -27,8 +28,8 @@ export default function TransactionList({ items, onEdit, onDelete }) {
               <td>{t.categoryName}</td>
               <td>{formatDateBR(t.transactionDate)}</td>
               <td>{t.createdByName}</td>
-              <td className={`align-right amount ${t.type === 'INCOME' ? 'income' : 'expense'}`}>
-                {t.type === 'INCOME' ? '+ ' : '− '}
+              <td className={`align-right amount ${typeClass(t.type)}`}>
+                {typeSign(t.type)}
                 {centsToBRL(t.amountCents)}
               </td>
               <td className="row-actions">
@@ -48,17 +49,15 @@ export default function TransactionList({ items, onEdit, onDelete }) {
         {items.map((t) => (
           <div className="transaction-card" key={t.id}>
             <div className="transaction-card-main">
-              <div className={`t-icon ${t.type === 'INCOME' ? 'income' : 'expense'}`}>
-                {t.categoryName.charAt(0).toUpperCase()}
-              </div>
+              <div className={`t-icon ${typeClass(t.type)}`}>{t.categoryName.charAt(0).toUpperCase()}</div>
               <div className="t-main">
                 <strong>{t.description}</strong>
                 <span>
                   {t.categoryName} • {formatDateBR(t.transactionDate)} • {t.createdByName}
                 </span>
               </div>
-              <strong className={`amount ${t.type === 'INCOME' ? 'income' : 'expense'}`}>
-                {t.type === 'INCOME' ? '+ ' : '− '}
+              <strong className={`amount ${typeClass(t.type)}`}>
+                {typeSign(t.type)}
                 {centsToBRL(t.amountCents)}
               </strong>
             </div>

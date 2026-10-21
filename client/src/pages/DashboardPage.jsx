@@ -104,6 +104,13 @@ export default function DashboardPage() {
                 <strong>{centsToBRL(data.netCents)}</strong>
               </div>
             </article>
+            <article className="stat">
+              <div className="stat-icon inv">◎</div>
+              <div>
+                <span>Investido no mês</span>
+                <strong>{centsToBRL(data.investmentCents)}</strong>
+              </div>
+            </article>
           </section>
 
           <section className="quick-actions">
@@ -112,6 +119,9 @@ export default function DashboardPage() {
             </button>
             <button className="btn danger" onClick={() => setModalType('EXPENSE')}>
               − Adicionar saída
+            </button>
+            <button className="btn invest" onClick={() => setModalType('INVESTMENT')}>
+              ◎ Investir
             </button>
           </section>
 

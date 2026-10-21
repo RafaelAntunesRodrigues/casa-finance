@@ -130,6 +130,7 @@ export default function TransactionsPage() {
           <option value="">Todos os tipos</option>
           <option value="INCOME">Entradas</option>
           <option value="EXPENSE">Saídas</option>
+          <option value="INVESTMENT">Investimentos</option>
         </select>
         <select value={categoryId} onChange={(e) => resetToFirstPage(setCategoryId)(e.target.value)}>
           <option value="">Todas as categorias</option>
