@@ -7,7 +7,11 @@ Controle financeiro local e responsivo para duas pessoas acompanharem o dinheiro
 - **Banco:** SQLite (módulo nativo `node:sqlite` do Node.js — sem dependências de compilação)
 - **Autenticação:** login local com duas contas, senha com hash (bcrypt) e sessão `HttpOnly`
 
-O saldo nunca é um número editável: ele é sempre **derivado do histórico de movimentações** (`saldo = soma das entradas − soma das saídas`). O dinheiro disponível inicial é cadastrado como uma entrada na categoria "Saldo inicial / Aporte".
+O saldo nunca é um número editável: ele é sempre **derivado do histórico de movimentações** (`saldo = soma das entradas − soma das saídas − soma dos investimentos`). O dinheiro disponível inicial é cadastrado como uma entrada na categoria "Saldo inicial / Aporte".
+
+Além de Entradas e Saídas, o app tem:
+- **Investimento**: terceiro tipo de movimentação. Desconta do saldo (como uma saída), mas aparece separado em um card próprio no dashboard ("Investido no mês").
+- **Metas** (menu lateral): alvo de economia (ex. "guardar R$500 este mês", compara com o resultado líquido do mês) ou limite de gasto por categoria (ex. "no máximo R$300 em Decoração"). Pode repetir todo mês ou valer só para o mês em que foi criada.
 
 ---
 
