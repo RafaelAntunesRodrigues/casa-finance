@@ -1,0 +1,41 @@
+# Compose de PRODUÇÃO (roda na VM da internet). Diferente do
+# docker-compose.yml da raiz (que builda a imagem localmente para uso em
+# LAN), aqui a imagem já vem pronta do GitHub Container Registry — a VM só
+# baixa e roda, sem precisar buildar nada (importante em VMs "Always Free"
+# com pouca RAM/CPU).
+#
+# Uso: copie este arquivo + Caddyfile + .env para a VM (ex.: em ~/casa-finance/)
+# e rode `docker compose -f docker-compose.prod.yml up -d`.
+
+services:
+  app:
+    image: ${GHCR_IMAGE:-ghcr.io/SEU_USUARIO/casa-finance}:latest
+    container_name: casa-finance
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: casa-finance-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

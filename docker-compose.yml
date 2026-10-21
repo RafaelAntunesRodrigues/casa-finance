@@ -1,0 +1,12 @@
+services:
+  casa-finance:
+    build: .
+    container_name: casa-finance
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
