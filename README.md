@@ -136,7 +136,7 @@ Internet → DNS (DuckDNS, grátis) → IP público da VM
                                    SQLite em volume persistente (./data)
 ```
 
-O GitHub Actions builda a imagem Docker a cada `git push` na branch `main`, publica no GitHub Container Registry (GHCR, gratuito) e conecta via SSH na VM para atualizar os containers — sem nenhuma ação manual no dia a dia.
+O GitHub Actions builda a imagem Docker a cada `git push` na branch `master`, publica no GitHub Container Registry (GHCR, gratuito) e conecta via SSH na VM para atualizar os containers — sem nenhuma ação manual no dia a dia.
 
 ### 5.3. Passo a passo (uma única vez)
 
@@ -173,7 +173,7 @@ docker compose -f docker-compose.prod.yml exec app node scripts/create-users.js
 
 Acesse `https://SEU_DOMINIO` para confirmar.
 
-A partir daqui, qualquer `git push` para `main` builda, publica e redeploya sozinho via `.github/workflows/deploy.yml`.
+A partir daqui, qualquer `git push` para `master` builda, publica e redeploya sozinho via `.github/workflows/deploy.yml`.
 
 ### 5.4. Segurança ao ficar exposto à internet
 
