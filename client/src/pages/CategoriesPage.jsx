@@ -4,10 +4,11 @@ import { useToast } from '../hooks/useToast.jsx';
 
 const KIND_LABEL = { INCOME: 'Entrada', EXPENSE: 'Saída', BOTH: 'Ambos' };
 
-const EMPTY_FORM = { name: '', kind: 'EXPENSE' };
+const EMPTY_FORM = { name: '', kind: 'EXPENSE', scope: 'HOUSE' };
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
+  const [scopeFilter, setScopeFilter] = useState('HOUSE');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
@@ -33,12 +34,12 @@ export default function CategoriesPage() {
 
   function startEdit(category) {
     setEditingId(category.id);
-    setForm({ name: category.name, kind: category.kind });
+    setForm({ name: category.name, kind: category.kind, scope: category.scope });
   }
 
   function cancelEdit() {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, scope: scopeFilter });
   }
 
   async function handleSubmit(e) {
@@ -50,7 +51,7 @@ export default function CategoriesPage() {
     setSubmitting(true);
     try {
       if (editingId) {
-        await api.put(`/categories/${editingId}`, form);
+        await api.put(`/categories/${editingId}`, { name: form.name, kind: form.kind });
         toast.success('Categoria atualizada.');
       } else {
         await api.post('/categories', form);
@@ -75,6 +76,8 @@ export default function CategoriesPage() {
     }
   }
 
+  const visibleCategories = categories.filter((c) => c.scope === scopeFilter);
+
   return (
     <>
       <header className="topbar">
@@ -83,6 +86,29 @@ export default function CategoriesPage() {
           <h1>Categorias</h1>
         </div>
       </header>
+
+      <div className="segmented" style={{ '--segments': 2, maxWidth: 320 }}>
+        <button
+          type="button"
+          className={scopeFilter === 'HOUSE' ? 'selected' : ''}
+          onClick={() => {
+            setScopeFilter('HOUSE');
+            if (!editingId) setForm((f) => ({ ...f, scope: 'HOUSE' }));
+          }}
+        >
+          Da casa
+        </button>
+        <button
+          type="button"
+          className={scopeFilter === 'PERSONAL' ? 'selected' : ''}
+          onClick={() => {
+            setScopeFilter('PERSONAL');
+            if (!editingId) setForm((f) => ({ ...f, scope: 'PERSONAL' }));
+          }}
+        >
+          Pessoal
+        </button>
+      </div>
 
       <section className="panel">
         <form className="category-form" onSubmit={handleSubmit}>
@@ -106,6 +132,19 @@ export default function CategoriesPage() {
               <option value="BOTH">Ambos</option>
             </select>
           </label>
+          {!editingId && (
+            <label htmlFor="cat-scope">
+              Escopo
+              <select
+                id="cat-scope"
+                value={form.scope}
+                onChange={(e) => setForm((f) => ({ ...f, scope: e.target.value }))}
+              >
+                <option value="HOUSE">Casa</option>
+                <option value="PERSONAL">Pessoal</option>
+              </select>
+            </label>
+          )}
           <div className="category-form-actions">
             <button type="submit" className="btn primary" disabled={submitting}>
               {editingId ? 'Salvar alterações' : '+ Nova categoria'}
@@ -134,7 +173,7 @@ export default function CategoriesPage() {
               </tr>
             </thead>
             <tbody>
-              {categories.map((c) => (
+              {visibleCategories.map((c) => (
                 <tr key={c.id} className={c.active ? '' : 'muted-row'}>
                   <td>{c.name}</td>
                   <td>{KIND_LABEL[c.kind]}</td>

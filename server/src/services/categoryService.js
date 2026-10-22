@@ -2,25 +2,32 @@ import { db } from '../db/index.js';
 import { ConflictError, NotFoundError, ValidationError } from '../utils/errors.js';
 
 const KINDS = new Set(['INCOME', 'EXPENSE', 'BOTH']);
+const SCOPES = new Set(['HOUSE', 'PERSONAL']);
 
-export function listCategories({ active } = {}) {
-  if (active === true) {
-    return db.prepare('SELECT * FROM categories WHERE active = 1 ORDER BY name').all();
+export function listCategories({ active, scope } = {}) {
+  const clauses = [];
+  const params = {};
+  if (active === true) clauses.push('active = 1');
+  if (active === false) clauses.push('active = 0');
+  if (scope) {
+    clauses.push('scope = @scope');
+    params.scope = scope;
   }
-  if (active === false) {
-    return db.prepare('SELECT * FROM categories WHERE active = 0 ORDER BY name').all();
-  }
-  return db.prepare('SELECT * FROM categories ORDER BY name').all();
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return db.prepare(`SELECT * FROM categories ${where} ORDER BY name`).all(params);
 }
 
 export function getCategoryById(id) {
   return db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
 }
 
-export function assertUsableCategory(id, type) {
+export function assertUsableCategory(id, type, { scope } = {}) {
   const category = getCategoryById(id);
   if (!category || !category.active) {
     throw new ValidationError('Categoria inexistente ou inativa', { categoryId: 'invalid' });
+  }
+  if (scope && category.scope !== scope) {
+    throw new ValidationError('Categoria não pertence a esse módulo', { categoryId: 'invalid' });
   }
   if (category.kind !== 'BOTH' && category.kind !== type) {
     throw new ValidationError('Categoria não é compatível com o tipo da movimentação', {
@@ -30,7 +37,7 @@ export function assertUsableCategory(id, type) {
   return category;
 }
 
-export function createCategory({ name, kind }) {
+export function createCategory({ name, kind, scope = 'HOUSE' }) {
   const trimmed = (name || '').trim();
   if (!trimmed) {
     throw new ValidationError('Nome da categoria é obrigatório', { name: 'required' });
@@ -38,13 +45,16 @@ export function createCategory({ name, kind }) {
   if (!KINDS.has(kind)) {
     throw new ValidationError('Tipo de categoria inválido', { kind: 'invalid' });
   }
+  if (!SCOPES.has(scope)) {
+    throw new ValidationError('Escopo de categoria inválido', { scope: 'invalid' });
+  }
   const existing = db.prepare('SELECT id FROM categories WHERE name = ?').get(trimmed);
   if (existing) {
     throw new ConflictError('Já existe uma categoria com esse nome');
   }
   const info = db
-    .prepare('INSERT INTO categories (name, kind) VALUES (?, ?)')
-    .run(trimmed, kind);
+    .prepare('INSERT INTO categories (name, kind, scope) VALUES (?, ?, ?)')
+    .run(trimmed, kind, scope);
   return getCategoryById(info.lastInsertRowid);
 }
 

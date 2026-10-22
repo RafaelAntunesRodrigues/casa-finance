@@ -5,7 +5,7 @@ import { db } from './index.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-const CURRENT_SCHEMA_VERSION = 1;
+const CURRENT_SCHEMA_VERSION = 2;
 
 export function applySchema() {
   const schema = fs.readFileSync(path.join(here, 'schema.sql'), 'utf8');
@@ -14,10 +14,42 @@ export function applySchema() {
 }
 
 function runMigrations() {
-  const { user_version: version } = db.prepare('PRAGMA user_version').get();
+  let { user_version: version } = db.prepare('PRAGMA user_version').get();
   if (version < 1) {
     migrateAddInvestmentType();
-    db.exec(`PRAGMA user_version = 1`);
+    version = 1;
+    db.exec(`PRAGMA user_version = ${version}`);
+  }
+  if (version < 2) {
+    migrateAddPersonalModule();
+    version = 2;
+    db.exec(`PRAGMA user_version = ${version}`);
+  }
+}
+
+function hasColumn(table, column) {
+  return db
+    .prepare(`SELECT 1 FROM pragma_table_info(?) WHERE name = ?`)
+    .get(table, column) !== undefined;
+}
+
+/**
+ * Introduz o módulo pessoal (Rafael/Duda): coluna `scope` em categories,
+ * coluna `owner_id` em goals (ambas via ALTER TABLE ADD COLUMN, que o
+ * SQLite suporta mesmo com CHECK/DEFAULT, sem precisar reconstruir a
+ * tabela). As tabelas novas (personal_transactions, personal_fixed_templates)
+ * já são criadas pelo schema.sql (CREATE TABLE IF NOT EXISTS).
+ */
+function migrateAddPersonalModule() {
+  if (!hasColumn('categories', 'scope')) {
+    db.exec(
+      "ALTER TABLE categories ADD COLUMN scope TEXT NOT NULL DEFAULT 'HOUSE' CHECK (scope IN ('HOUSE', 'PERSONAL'))"
+    );
+    console.log('Migração aplicada: categories.scope adicionada.');
+  }
+  if (!hasColumn('goals', 'owner_id')) {
+    db.exec('ALTER TABLE goals ADD COLUMN owner_id INTEGER REFERENCES users(id)');
+    console.log('Migração aplicada: goals.owner_id adicionada.');
   }
 }
 

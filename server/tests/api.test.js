@@ -8,19 +8,24 @@ import { createUser } from '../src/services/userService.js';
 
 let app;
 let categories;
+let users;
 
 beforeAll(() => {
   applySchema();
 
   categories = {
-    saldoInicial: createCategory({ name: 'Saldo inicial / Aporte', kind: 'INCOME' }),
-    moveis: createCategory({ name: 'Móveis', kind: 'EXPENSE' }),
-    eletro: createCategory({ name: 'Eletrodomésticos', kind: 'EXPENSE' }),
-    investimentos: createCategory({ name: 'Investimentos', kind: 'BOTH' }),
+    saldoInicial: createCategory({ name: 'Saldo inicial / Aporte', kind: 'INCOME', scope: 'HOUSE' }),
+    moveis: createCategory({ name: 'Móveis', kind: 'EXPENSE', scope: 'HOUSE' }),
+    eletro: createCategory({ name: 'Eletrodomésticos', kind: 'EXPENSE', scope: 'HOUSE' }),
+    salario: createCategory({ name: 'Salário', kind: 'INCOME', scope: 'PERSONAL' }),
+    lazer: createCategory({ name: 'Lazer', kind: 'EXPENSE', scope: 'PERSONAL' }),
+    investPessoal: createCategory({ name: 'Investimentos pessoais', kind: 'BOTH', scope: 'PERSONAL' }),
   };
 
-  createUser({ name: 'Rafael', username: 'rafael', password: 'senha-forte-123' });
-  createUser({ name: 'Pessoa 2', username: 'pessoa2', password: 'outra-senha-456' });
+  users = {
+    rafael: createUser({ name: 'Rafael', username: 'rafael', password: 'senha-forte-123' }),
+    pessoa2: createUser({ name: 'Pessoa 2', username: 'pessoa2', password: 'outra-senha-456' }),
+  };
 
   app = createApp();
 });
@@ -45,6 +50,11 @@ describe('Cenário 10 — segurança: rotas de dados exigem autenticação', () 
 
   it('rejeita listagem de categorias sem sessão', async () => {
     const res = await request(app).get('/api/categories');
+    expect(res.status).toBe(401);
+  });
+
+  it('rejeita módulo pessoal sem sessão', async () => {
+    const res = await request(app).get(`/api/personal/${users.rafael.id}/dashboard`);
     expect(res.status).toBe(401);
   });
 
@@ -264,6 +274,17 @@ describe('Cenário 9 — validações obrigatórias', () => {
     const del = await agent.delete('/api/transactions/999999');
     expect(del.status).toBe(404);
   });
+
+  it('rejeita tipo INVESTMENT no módulo da casa (investir só pelo módulo pessoal)', async () => {
+    const res = await agent.post('/api/transactions').send({
+      type: 'INVESTMENT',
+      amountCents: 1000,
+      categoryId: categories.moveis.id,
+      description: 'Teste',
+      transactionDate: '2026-10-15',
+    });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('Categorias', () => {
@@ -290,6 +311,15 @@ describe('Categorias', () => {
     const res = await agent.post('/api/categories').send({ name: 'Móveis', kind: 'EXPENSE' });
     expect(res.status).toBe(409);
   });
+
+  it('filtra por escopo (HOUSE vs PERSONAL)', async () => {
+    const house = await agent.get('/api/categories?scope=HOUSE');
+    const personal = await agent.get('/api/categories?scope=PERSONAL');
+    expect(house.body.some((c) => c.name === 'Móveis')).toBe(true);
+    expect(house.body.some((c) => c.name === 'Salário')).toBe(false);
+    expect(personal.body.some((c) => c.name === 'Salário')).toBe(true);
+    expect(personal.body.some((c) => c.name === 'Móveis')).toBe(false);
+  });
 });
 
 describe('Exportação CSV', () => {
@@ -302,103 +332,229 @@ describe('Exportação CSV', () => {
   });
 });
 
-describe('Investimento — novo tipo de movimentação', () => {
-  it('investimento desconta do saldo e aparece separado de entradas/saídas', async () => {
+describe('Módulo pessoal — isolamento do saldo da casa', () => {
+  it('entrada pessoal não altera o saldo disponível da casa', async () => {
     const agent = await loginAs('rafael', 'senha-forte-123');
 
-    await agent.post('/api/transactions').send({
-      type: 'INCOME',
-      amountCents: 500_000,
-      categoryId: categories.saldoInicial.id,
-      description: 'Aporte janeiro',
-      transactionDate: '2027-01-05',
-    });
-
-    const beforeDash = await agent.get('/api/dashboard?month=2027-01');
+    const beforeDash = await agent.get('/api/dashboard?month=2026-10');
     const balanceBefore = beforeDash.body.balanceCents;
 
-    const invested = await agent.post('/api/transactions').send({
-      type: 'INVESTMENT',
-      amountCents: 100_000,
-      categoryId: categories.investimentos.id,
-      description: 'CDB',
-      transactionDate: '2027-01-10',
+    const created = await agent.post(`/api/personal/${users.rafael.id}/transactions`).send({
+      type: 'INCOME',
+      amountCents: 500_000,
+      categoryId: categories.salario.id,
+      description: 'Salário outubro',
+      transactionDate: '2026-10-05',
     });
-    expect(invested.status).toBe(201);
+    expect(created.status).toBe(201);
 
-    const dash = await agent.get('/api/dashboard?month=2027-01');
-    expect(dash.body.incomeCents).toBe(500_000);
-    expect(dash.body.investmentCents).toBe(100_000);
-    expect(dash.body.expenseCents).toBe(0);
-    expect(dash.body.netCents).toBe(400_000);
-    // O investimento desconta do saldo acumulado, assim como uma saída.
-    expect(dash.body.balanceCents).toBe(balanceBefore - 100_000);
+    const afterDash = await agent.get('/api/dashboard?month=2026-10');
+    expect(afterDash.body.balanceCents).toBe(balanceBefore);
   });
 
-  it('rejeita categoria de tipo EXPENSE para movimentação de investimento', async () => {
+  it('é aberto: o outro usuário também vê os lançamentos pessoais', async () => {
+    const agentB = await loginAs('pessoa2', 'outra-senha-456');
+    const list = await agentB.get(`/api/personal/${users.rafael.id}/transactions?month=2026-10`);
+    expect(list.status).toBe(200);
+    expect(list.body.items.some((t) => t.description === 'Salário outubro')).toBe(true);
+  });
+
+  it('rejeita categoria da casa dentro do módulo pessoal', async () => {
     const agent = await loginAs('rafael', 'senha-forte-123');
-    const res = await agent.post('/api/transactions').send({
-      type: 'INVESTMENT',
+    const res = await agent.post(`/api/personal/${users.rafael.id}/transactions`).send({
+      type: 'EXPENSE',
+      expenseKind: 'NORMAL',
       amountCents: 1000,
       categoryId: categories.moveis.id,
-      description: 'Teste',
-      transactionDate: '2027-01-15',
+      description: 'Teste escopo errado',
+      transactionDate: '2026-10-05',
     });
     expect(res.status).toBe(400);
   });
+
+  it('owner inexistente retorna 404', async () => {
+    const agent = await loginAs('rafael', 'senha-forte-123');
+    const res = await agent.get('/api/personal/999999/dashboard');
+    expect(res.status).toBe(404);
+  });
 });
 
-describe('Metas', () => {
+describe('Módulo pessoal — investimento separado do saldo pessoal', () => {
+  it('investimento pessoal não entra no resultado pessoal, mas conta no total investido', async () => {
+    const agent = await loginAs('rafael', 'senha-forte-123');
+
+    const beforeDash = await agent.get('/api/dashboard?month=2026-10');
+    const totalInvestedBefore = beforeDash.body.totalInvestedCents;
+
+    const personalBefore = await agent.get(`/api/personal/${users.rafael.id}/dashboard?month=2026-10`);
+    const netBefore = personalBefore.body.netCents;
+
+    const invested = await agent.post(`/api/personal/${users.rafael.id}/transactions`).send({
+      type: 'INVESTMENT',
+      amountCents: 50_000,
+      categoryId: categories.investPessoal.id,
+      description: 'CDB Rafael',
+      transactionDate: '2026-10-07',
+    });
+    expect(invested.status).toBe(201);
+
+    const personalAfter = await agent.get(`/api/personal/${users.rafael.id}/dashboard?month=2026-10`);
+    expect(personalAfter.body.investmentCents).toBe(50_000);
+    expect(personalAfter.body.netCents).toBe(netBefore); // investimento não mexe no líquido pessoal
+    expect(personalAfter.body.balanceCents).toBe(personalBefore.body.balanceCents); // nem no saldo pessoal
+
+    const houseDash = await agent.get('/api/dashboard?month=2026-10');
+    expect(houseDash.body.totalInvestedCents).toBe(totalInvestedBefore + 50_000);
+  });
+});
+
+describe('Módulo pessoal — gasto parcelado', () => {
+  it('divide o valor total pela quantidade de parcelas, uma por mês', async () => {
+    const agent = await loginAs('pessoa2', 'outra-senha-456');
+
+    const created = await agent.post(`/api/personal/${users.pessoa2.id}/transactions`).send({
+      type: 'EXPENSE',
+      expenseKind: 'INSTALLMENT',
+      amountCents: 1000, // R$10,00 em 3x -> 333+333+334
+      installments: 3,
+      categoryId: categories.lazer.id,
+      description: 'Compra parcelada',
+      transactionDate: '2026-10-10',
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.amountCents).toBe(333);
+    expect(created.body.installmentTotal).toBe(3);
+
+    const out = await agent.get(`/api/personal/${users.pessoa2.id}/transactions?month=2026-10`);
+    const nov = await agent.get(`/api/personal/${users.pessoa2.id}/transactions?month=2026-11`);
+    const dez = await agent.get(`/api/personal/${users.pessoa2.id}/transactions?month=2026-12`);
+
+    const parcela1 = out.body.items.find((t) => t.description.includes('(1/3)'));
+    const parcela2 = nov.body.items.find((t) => t.description.includes('(2/3)'));
+    const parcela3 = dez.body.items.find((t) => t.description.includes('(3/3)'));
+
+    expect(parcela1.amountCents).toBe(333);
+    expect(parcela2.amountCents).toBe(333);
+    expect(parcela3.amountCents).toBe(334); // resto da divisão vai na última parcela
+    expect(parcela1.amountCents + parcela2.amountCents + parcela3.amountCents).toBe(1000);
+  });
+});
+
+describe('Módulo pessoal — gasto fixo', () => {
+  it('gera um lançamento real a cada mês consultado, automaticamente', async () => {
+    const agent = await loginAs('rafael', 'senha-forte-123');
+
+    const template = await agent.post(`/api/personal/${users.rafael.id}/fixed-expenses`).send({
+      categoryId: categories.lazer.id,
+      description: 'Streaming',
+      amountCents: 4_990,
+      dayOfMonth: 10,
+      startMonth: '2026-10',
+    });
+    expect(template.status).toBe(201);
+
+    const out = await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2026-10`);
+    expect(out.body.items.some((t) => t.description === 'Streaming' && t.expenseKind === 'FIXED')).toBe(true);
+
+    // Consultar um mês futuro deve gerar a ocorrência na hora, sozinho.
+    const future = await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2027-03`);
+    const occurrence = future.body.items.find((t) => t.description === 'Streaming');
+    expect(occurrence).toBeTruthy();
+    expect(occurrence.transactionDate).toBe('2027-03-10');
+
+    // Consultar de novo não duplica.
+    const again = await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2027-03`);
+    expect(again.body.items.filter((t) => t.description === 'Streaming').length).toBe(1);
+  });
+
+  it('pausar o gasto fixo impede novas ocorrências, mas preserva as já geradas', async () => {
+    const agent = await loginAs('rafael', 'senha-forte-123');
+    const templates = await agent.get(`/api/personal/${users.rafael.id}/fixed-expenses`);
+    const streaming = templates.body.find((t) => t.description === 'Streaming');
+
+    const paused = await agent.patch(`/api/personal/${users.rafael.id}/fixed-expenses/${streaming.id}/status`).send({ active: false });
+    expect(paused.status).toBe(200);
+    expect(paused.body.active).toBe(0);
+
+    await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2027-06`);
+    const junList = await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2027-06`);
+    expect(junList.body.items.some((t) => t.description === 'Streaming')).toBe(false);
+
+    // Mês já gerado antes da pausa continua existindo.
+    const marList = await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2027-03`);
+    expect(marList.body.items.some((t) => t.description === 'Streaming')).toBe(true);
+  });
+});
+
+describe('Metas — casal x pessoal', () => {
   let agent;
 
   beforeAll(async () => {
     agent = await loginAs('rafael', 'senha-forte-123');
   });
 
-  it('cria meta de economia (sem categoria) e calcula progresso com base no resultado líquido do mês', async () => {
+  it('meta do casal combina resultado da casa + pessoal dos dois', async () => {
+    const houseDash = await agent.get('/api/dashboard?month=2026-10');
+    const rafaelDash = await agent.get(`/api/personal/${users.rafael.id}/dashboard?month=2026-10`);
+    const pessoa2Dash = await agent.get(`/api/personal/${users.pessoa2.id}/dashboard?month=2026-10`);
+    const expectedCombined = houseDash.body.netCents + rafaelDash.body.netCents + pessoa2Dash.body.netCents;
+
     const created = await agent.post('/api/goals').send({
-      name: 'Guardar para a casa',
-      targetCents: 300_000,
+      name: 'Meta do casal',
+      targetCents: 1,
       recurrence: 'MONTHLY',
     });
     expect(created.status).toBe(201);
 
-    // Reaproveita as movimentações de 2027-01 do bloco anterior:
-    // entradas 500000, investimento 100000, saídas 0 => líquido 400000
-    const list = await agent.get('/api/goals?month=2027-01');
-    expect(list.status).toBe(200);
+    const list = await agent.get('/api/goals?month=2026-10');
     const goal = list.body.find((g) => g.id === created.body.id);
     expect(goal.progress.kind).toBe('SAVINGS');
-    expect(goal.progress.currentCents).toBe(400_000);
-    expect(goal.progress.achieved).toBe(true);
+    expect(goal.progress.currentCents).toBe(expectedCombined);
   });
 
-  it('meta com categoria vira limite de gasto e meta ONCE só vale no mês definido', async () => {
-    await agent.post('/api/transactions').send({
-      type: 'EXPENSE',
-      amountCents: 120_000,
-      categoryId: categories.moveis.id,
-      description: 'Cadeira',
-      transactionDate: '2027-02-05',
-    });
+  it('meta pessoal compara só com o resultado daquela pessoa', async () => {
+    const rafaelDash = await agent.get(`/api/personal/${users.rafael.id}/dashboard?month=2026-10`);
 
     const created = await agent.post('/api/goals').send({
-      name: 'Limite Móveis Fevereiro',
-      targetCents: 100_000,
-      categoryId: categories.moveis.id,
-      recurrence: 'ONCE',
-      month: '2027-02',
+      name: 'Meta pessoal do Rafael',
+      targetCents: 1,
+      ownerId: users.rafael.id,
+      recurrence: 'MONTHLY',
     });
     expect(created.status).toBe(201);
 
-    const febList = await agent.get('/api/goals?month=2027-02');
-    const goalFeb = febList.body.find((g) => g.id === created.body.id);
-    expect(goalFeb.progress.kind).toBe('SPENDING_CAP');
-    expect(goalFeb.progress.currentCents).toBe(120_000);
-    expect(goalFeb.progress.achieved).toBe(false);
+    const list = await agent.get('/api/goals?month=2026-10');
+    const goal = list.body.find((g) => g.id === created.body.id);
+    expect(goal.progress.kind).toBe('SAVINGS');
+    expect(goal.progress.currentCents).toBe(rafaelDash.body.netCents);
+  });
 
-    const janList = await agent.get('/api/goals?month=2027-01');
-    expect(janList.body.find((g) => g.id === created.body.id)).toBeFalsy();
+  it('meta pessoal só aceita categoria pessoal, meta do casal só aceita categoria da casa', async () => {
+    const personalWithHouseCategory = await agent.post('/api/goals').send({
+      name: 'Inválida',
+      targetCents: 1000,
+      categoryId: categories.moveis.id,
+      ownerId: users.rafael.id,
+      recurrence: 'MONTHLY',
+    });
+    expect(personalWithHouseCategory.status).toBe(400);
+
+    const coupleWithPersonalCategory = await agent.post('/api/goals').send({
+      name: 'Inválida 2',
+      targetCents: 1000,
+      categoryId: categories.lazer.id,
+      recurrence: 'MONTHLY',
+    });
+    expect(coupleWithPersonalCategory.status).toBe(400);
+
+    const valid = await agent.post('/api/goals').send({
+      name: 'Limite lazer Rafael',
+      targetCents: 10_000,
+      categoryId: categories.lazer.id,
+      ownerId: users.rafael.id,
+      recurrence: 'MONTHLY',
+    });
+    expect(valid.status).toBe(201);
   });
 
   it('rejeita meta ONCE sem mês informado', async () => {
@@ -419,7 +575,7 @@ describe('Metas', () => {
     const del = await agent.delete(`/api/goals/${created.body.id}`);
     expect(del.status).toBe(204);
 
-    const list = await agent.get('/api/goals?month=2027-01');
+    const list = await agent.get('/api/goals?month=2026-10');
     expect(list.body.find((g) => g.id === created.body.id)).toBeFalsy();
   });
 });

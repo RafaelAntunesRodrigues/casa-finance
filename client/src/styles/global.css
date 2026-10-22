@@ -473,6 +473,18 @@ main {
   color: var(--inv);
 }
 
+.personal-tx-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.personal-tx-end .link-btn {
+  font-size: 11px;
+  padding: 0;
+}
+
 /* ---------- Transactions page ---------- */
 .filters-bar {
   display: flex;
@@ -647,6 +659,17 @@ main {
   margin-top: 2px;
 }
 
+.goal-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--brand2);
+  background: var(--soft);
+  border-radius: 20px;
+  padding: 2px 8px;
+  margin-top: 4px;
+}
+
 .goal-status {
   width: 26px;
   height: 26px;
@@ -697,6 +720,82 @@ main {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+/* ---------- Pessoal: histórico e gastos fixos ---------- */
+.trend-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.trend-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 1fr 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.trend-row:first-child {
+  border-top: 0;
+}
+
+.trend-month {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.trend-figure {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.trend-figure.in {
+  color: var(--in);
+}
+
+.trend-figure.out {
+  color: var(--out);
+}
+
+.fixed-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.fixed-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.fixed-row:first-child {
+  border-top: 0;
+}
+
+.fixed-row.fixed-paused {
+  opacity: 0.55;
+}
+
+.fixed-row strong,
+.fixed-row span {
+  display: block;
+}
+
+.fixed-row > div > span {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.fixed-actions {
+  display: flex;
+  gap: 10px;
 }
 
 /* ---------- Modal ---------- */
@@ -1122,7 +1221,7 @@ main {
     background: white;
     border-top: 1px solid var(--line);
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     z-index: 15;
   }
 
@@ -1133,14 +1232,14 @@ main {
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    padding: 10px 4px;
+    padding: 8px 2px;
     color: var(--muted);
-    font-size: 10px;
+    font-size: 9px;
     cursor: pointer;
   }
 
   .bottom-nav-item .icon {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .bottom-nav-item.active {
@@ -1163,5 +1262,20 @@ main {
   .filters-bar input[type='search'],
   .filters-bar .btn {
     width: 100%;
+  }
+
+  .trend-row {
+    grid-template-columns: 70px 1fr 1fr 1fr;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .fixed-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .fixed-row strong.amount {
+    justify-self: start;
   }
 }

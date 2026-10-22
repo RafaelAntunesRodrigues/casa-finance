@@ -10,7 +10,7 @@ const EMPTY_FORM = {
   description: '',
 };
 
-const TYPE_LABEL = { INCOME: 'Entrada', EXPENSE: 'Saída', INVESTMENT: 'Investimento' };
+const TYPE_LABEL = { INCOME: 'Entrada', EXPENSE: 'Saída' };
 
 export default function TransactionFormModal({ open, categories, initial, defaultType, onCancel, onSubmit, submitting }) {
   const [form, setForm] = useState(EMPTY_FORM);
@@ -81,7 +81,7 @@ export default function TransactionFormModal({ open, categories, initial, defaul
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="segmented" style={{ '--segments': 3 }}>
+          <div className="segmented" style={{ '--segments': 2 }}>
             <button
               type="button"
               className={form.type === 'INCOME' ? 'selected' : ''}
@@ -95,13 +95,6 @@ export default function TransactionFormModal({ open, categories, initial, defaul
               onClick={() => update('type', 'EXPENSE')}
             >
               Saída
-            </button>
-            <button
-              type="button"
-              className={form.type === 'INVESTMENT' ? 'selected' : ''}
-              onClick={() => update('type', 'INVESTMENT')}
-            >
-              Investimento
             </button>
           </div>
 

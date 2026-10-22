@@ -1,5 +1,6 @@
 import { db } from '../db/index.js';
 import { monthRange } from '../utils/dates.js';
+import { sumPersonalByType } from './personalTransactionService.js';
 
 function sumByType(type, { upTo, start, end }) {
   if (upTo) {
@@ -20,11 +21,18 @@ function sumByType(type, { upTo, start, end }) {
   return row.total;
 }
 
+// Saldo disponível da casa: só entradas - saídas da casa. Investimento é
+// tratado inteiramente à parte (módulo pessoal) e nunca desconta daqui.
 export function getBalanceUpTo(date) {
   const income = sumByType('INCOME', { upTo: date });
   const expense = sumByType('EXPENSE', { upTo: date });
-  const investment = sumByType('INVESTMENT', { upTo: date });
-  return income - expense - investment;
+  return income - expense;
+}
+
+function getTotalInvestedUpTo(date) {
+  // Soma os investimentos pessoais de qualquer um dos dois (sem filtrar
+  // owner_id = agrega todo mundo).
+  return sumPersonalByType('INVESTMENT', { upTo: date });
 }
 
 export function getDashboard(month) {
@@ -33,8 +41,8 @@ export function getDashboard(month) {
   const balanceCents = getBalanceUpTo(end);
   const incomeCents = sumByType('INCOME', { start, end });
   const expenseCents = sumByType('EXPENSE', { start, end });
-  const investmentCents = sumByType('INVESTMENT', { start, end });
-  const netCents = incomeCents - expenseCents - investmentCents;
+  const netCents = incomeCents - expenseCents;
+  const totalInvestedCents = getTotalInvestedUpTo(end);
 
   const expensesByCategory = db
     .prepare(
@@ -72,8 +80,8 @@ export function getDashboard(month) {
     balanceCents,
     incomeCents,
     expenseCents,
-    investmentCents,
     netCents,
+    totalInvestedCents,
     expensesByCategory,
     recentTransactions,
   };

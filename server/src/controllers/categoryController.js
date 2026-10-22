@@ -17,7 +17,8 @@ export const list = asyncHandler(async (req, res) => {
   let active;
   if (req.query.active === 'true') active = true;
   if (req.query.active === 'false') active = false;
-  res.json(listCategories({ active }));
+  const scope = req.query.scope === 'HOUSE' || req.query.scope === 'PERSONAL' ? req.query.scope : undefined;
+  res.json(listCategories({ active, scope }));
 });
 
 export const create = asyncHandler(async (req, res) => {

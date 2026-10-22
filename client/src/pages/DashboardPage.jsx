@@ -107,8 +107,8 @@ export default function DashboardPage() {
             <article className="stat">
               <div className="stat-icon inv">◎</div>
               <div>
-                <span>Investido no mês</span>
-                <strong>{centsToBRL(data.investmentCents)}</strong>
+                <span>Total investido (casal)</span>
+                <strong>{centsToBRL(data.totalInvestedCents)}</strong>
               </div>
             </article>
           </section>
@@ -119,9 +119,6 @@ export default function DashboardPage() {
             </button>
             <button className="btn danger" onClick={() => setModalType('EXPENSE')}>
               − Adicionar saída
-            </button>
-            <button className="btn invest" onClick={() => setModalType('INVESTMENT')}>
-              ◎ Investir
             </button>
           </section>
 

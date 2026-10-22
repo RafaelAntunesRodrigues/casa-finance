@@ -76,7 +76,7 @@ export function getTransactionById(id) {
 }
 
 export function createTransaction({ type, amountCents, categoryId, description, transactionDate, createdBy }) {
-  assertUsableCategory(categoryId, type);
+  assertUsableCategory(categoryId, type, { scope: 'HOUSE' });
   const info = db
     .prepare(
       `INSERT INTO transactions (type, amount_cents, category_id, description, transaction_date, created_by)
@@ -89,7 +89,7 @@ export function createTransaction({ type, amountCents, categoryId, description, 
 export function updateTransaction(id, { type, amountCents, categoryId, description, transactionDate }) {
   const existing = getTransactionById(id);
   if (!existing) throw new NotFoundError('Movimentação não encontrada');
-  assertUsableCategory(categoryId, type);
+  assertUsableCategory(categoryId, type, { scope: 'HOUSE' });
 
   db.prepare(
     `UPDATE transactions

@@ -14,6 +14,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
+import personalRoutes from './routes/personalRoutes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { apiRateLimiter } from './middleware/rateLimit.js';
 
@@ -71,6 +72,7 @@ export function createApp() {
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/goals', goalRoutes);
+  app.use('/api/personal', personalRoutes);
 
   if (fs.existsSync(config.clientDistPath)) {
     app.use(express.static(config.clientDistPath));

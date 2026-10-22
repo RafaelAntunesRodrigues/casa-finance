@@ -6,12 +6,23 @@ function buildEmptyForm(month) {
     name: '',
     target: '',
     categoryId: '',
+    ownerId: '',
     recurrence: 'MONTHLY',
     month,
   };
 }
 
-export default function GoalFormModal({ open, month, categories, initial, onCancel, onSubmit, submitting }) {
+export default function GoalFormModal({
+  open,
+  month,
+  houseCategories,
+  personalCategories,
+  members,
+  initial,
+  onCancel,
+  onSubmit,
+  submitting,
+}) {
   const [form, setForm] = useState(buildEmptyForm(month));
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -22,6 +33,7 @@ export default function GoalFormModal({ open, month, categories, initial, onCanc
         name: initial.name,
         target: centsToInputString(initial.targetCents),
         categoryId: initial.categoryId ? String(initial.categoryId) : '',
+        ownerId: initial.ownerId ? String(initial.ownerId) : '',
         recurrence: initial.recurrence,
         month: initial.month || month,
       });
@@ -33,8 +45,14 @@ export default function GoalFormModal({ open, month, categories, initial, onCanc
 
   if (!open) return null;
 
+  const availableCategories = form.ownerId ? personalCategories : houseCategories;
+
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function updateOwner(value) {
+    setForm((f) => ({ ...f, ownerId: value, categoryId: '' }));
   }
 
   function validate() {
@@ -60,6 +78,7 @@ export default function GoalFormModal({ open, month, categories, initial, onCanc
       name: form.name.trim(),
       targetCents: brlInputToCents(form.target),
       categoryId: form.categoryId ? Number(form.categoryId) : null,
+      ownerId: form.ownerId ? Number(form.ownerId) : null,
       recurrence: form.recurrence,
       month: form.recurrence === 'ONCE' ? form.month : null,
     });
@@ -90,6 +109,23 @@ export default function GoalFormModal({ open, month, categories, initial, onCanc
             {fieldErrors.name && <small className="field-error">{fieldErrors.name}</small>}
           </label>
 
+          <label htmlFor="goal-owner">
+            De quem é a meta
+            <select id="goal-owner" value={form.ownerId} onChange={(e) => updateOwner(e.target.value)}>
+              <option value="">Casal</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <small className="field-hint">
+              {form.ownerId
+                ? 'Meta pessoal: compara só com o resultado dessa pessoa no módulo pessoal.'
+                : 'Meta do casal: combina o resultado da casa com o pessoal dos dois.'}
+            </small>
+          </label>
+
           <label htmlFor="goal-target">
             Valor alvo
             <div className="money-input">
@@ -112,8 +148,8 @@ export default function GoalFormModal({ open, month, categories, initial, onCanc
               value={form.categoryId}
               onChange={(e) => update('categoryId', e.target.value)}
             >
-              <option value="">Nenhuma — meta de economia (saldo do mês)</option>
-              {categories.map((c) => (
+              <option value="">Nenhuma — meta de economia</option>
+              {availableCategories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -121,8 +157,8 @@ export default function GoalFormModal({ open, month, categories, initial, onCanc
             </select>
             <small className="field-hint">
               {form.categoryId
-                ? 'Com categoria: a meta vira um limite de gasto (quanto você gastou nessa categoria vs o valor alvo).'
-                : 'Sem categoria: a meta compara o resultado do mês (entradas − saídas − investimentos) com o valor alvo.'}
+                ? 'Com categoria: a meta vira um limite de gasto (quanto já foi gasto nessa categoria vs o valor alvo).'
+                : 'Sem categoria: a meta compara o resultado do período com o valor alvo.'}
             </small>
           </label>
 

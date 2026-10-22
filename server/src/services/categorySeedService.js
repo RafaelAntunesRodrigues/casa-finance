@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
 
-export const DEFAULT_CATEGORIES = [
+export const DEFAULT_HOUSE_CATEGORIES = [
   ['Saldo inicial / Aporte', 'INCOME'],
   ['Móveis', 'EXPENSE'],
   ['Eletrodomésticos', 'EXPENSE'],
@@ -10,19 +10,33 @@ export const DEFAULT_CATEGORIES = [
   ['Documentação / taxas', 'EXPENSE'],
   ['Contas da casa', 'EXPENSE'],
   ['Decoração', 'EXPENSE'],
-  ['Investimentos', 'BOTH'],
   ['Outros', 'BOTH'],
 ];
 
+export const DEFAULT_PERSONAL_CATEGORIES = [
+  ['Salário', 'INCOME'],
+  ['Freelas / renda extra', 'INCOME'],
+  ['Alimentação', 'EXPENSE'],
+  ['Transporte', 'EXPENSE'],
+  ['Lazer', 'EXPENSE'],
+  ['Assinaturas', 'EXPENSE'],
+  ['Saúde', 'EXPENSE'],
+  ['Educação', 'EXPENSE'],
+  ['Vestuário', 'EXPENSE'],
+  ['Investimentos pessoais', 'BOTH'],
+  ['Outros pessoais', 'BOTH'],
+];
+
 export function seedDefaultCategories() {
-  const insert = db.prepare('INSERT OR IGNORE INTO categories (name, kind) VALUES (?, ?)');
+  const insert = db.prepare('INSERT OR IGNORE INTO categories (name, kind, scope) VALUES (?, ?, ?)');
   db.exec('BEGIN');
   try {
-    for (const [name, kind] of DEFAULT_CATEGORIES) insert.run(name, kind);
+    for (const [name, kind] of DEFAULT_HOUSE_CATEGORIES) insert.run(name, kind, 'HOUSE');
+    for (const [name, kind] of DEFAULT_PERSONAL_CATEGORIES) insert.run(name, kind, 'PERSONAL');
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
   }
-  return DEFAULT_CATEGORIES.length;
+  return DEFAULT_HOUSE_CATEGORIES.length + DEFAULT_PERSONAL_CATEGORIES.length;
 }

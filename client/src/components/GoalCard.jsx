@@ -11,6 +11,7 @@ export default function GoalCard({ goal, onEdit, onToggleActive, onDelete }) {
       <div className="goal-card-head">
         <div>
           <strong>{goal.name}</strong>
+          <span className="goal-badge">{goal.ownerName ? goal.ownerName : 'Casal'}</span>
           <span className="goal-meta">
             {isSavings ? 'Alvo de economia' : `Limite em ${goal.categoryName}`} •{' '}
             {goal.recurrence === 'MONTHLY' ? 'Repete todo mês' : `Só em ${goal.month}`}

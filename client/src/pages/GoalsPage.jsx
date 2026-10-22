@@ -11,7 +11,9 @@ import { useToast } from '../hooks/useToast.jsx';
 export default function GoalsPage() {
   const [month, setMonth] = useState(currentMonth());
   const [goals, setGoals] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [houseCategories, setHouseCategories] = useState([]);
+  const [personalCategories, setPersonalCategories] = useState([]);
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -26,12 +28,16 @@ export default function GoalsPage() {
     setLoading(true);
     setError('');
     try {
-      const [goalsList, cats] = await Promise.all([
+      const [goalsList, houseCats, personalCats, users] = await Promise.all([
         api.get('/goals', { month }),
-        api.get('/categories', { active: true }),
+        api.get('/categories', { active: true, scope: 'HOUSE' }),
+        api.get('/categories', { active: true, scope: 'PERSONAL' }),
+        api.get('/users'),
       ]);
       setGoals(goalsList);
-      setCategories(cats);
+      setHouseCategories(houseCats);
+      setPersonalCategories(personalCats);
+      setMembers(users);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Não foi possível carregar as metas.');
     } finally {
@@ -147,7 +153,9 @@ export default function GoalsPage() {
       <GoalFormModal
         open={modalOpen}
         month={month}
-        categories={categories}
+        houseCategories={houseCategories}
+        personalCategories={personalCategories}
+        members={members}
         initial={editing}
         onCancel={() => setModalOpen(false)}
         onSubmit={handleSubmit}
