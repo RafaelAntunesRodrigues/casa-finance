@@ -9,7 +9,7 @@ function kindBadge(t) {
   return null;
 }
 
-export default function PersonalTransactionList({ items, onDelete }) {
+export default function PersonalTransactionList({ items, onEdit, onDelete }) {
   if (!items || items.length === 0) {
     return <EmptyState title="Nenhuma movimentação" description="Registre uma entrada, saída ou investimento pessoal." />;
   }
@@ -33,11 +33,18 @@ export default function PersonalTransactionList({ items, onDelete }) {
                 {typeSign(t.type)}
                 {centsToBRL(t.amountCents)}
               </strong>
-              {onDelete && (
-                <button className="link-btn danger" onClick={() => onDelete(t)}>
-                  Excluir
-                </button>
-              )}
+              <div className="personal-tx-actions">
+                {onEdit && (
+                  <button className="link-btn" onClick={() => onEdit(t)}>
+                    Editar
+                  </button>
+                )}
+                {onDelete && (
+                  <button className="link-btn danger" onClick={() => onDelete(t)}>
+                    Excluir
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );

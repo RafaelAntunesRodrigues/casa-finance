@@ -25,6 +25,7 @@ export default function PersonalPage() {
   const [error, setError] = useState('');
 
   const [modalType, setModalType] = useState(null);
+  const [editingTx, setEditingTx] = useState(null);
   const [fixedModalOpen, setFixedModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toDeleteTx, setToDeleteTx] = useState(null);
@@ -67,12 +68,32 @@ export default function PersonalPage() {
     load();
   }, [load]);
 
-  async function handleCreateTransaction(payload) {
+  function openCreate(type) {
+    setEditingTx(null);
+    setModalType(type);
+  }
+
+  function openEdit(transaction) {
+    setEditingTx(transaction);
+    setModalType(transaction.type);
+  }
+
+  function closeTransactionModal() {
+    setModalType(null);
+    setEditingTx(null);
+  }
+
+  async function handleSubmitTransaction(payload) {
     setSubmitting(true);
     try {
-      await api.post(`/personal/${ownerId}/transactions`, payload);
-      setModalType(null);
-      toast.success('Movimentação registrada.');
+      if (editingTx) {
+        await api.put(`/personal/${ownerId}/transactions/${editingTx.id}`, payload);
+        toast.success('Movimentação atualizada.');
+      } else {
+        await api.post(`/personal/${ownerId}/transactions`, payload);
+        toast.success('Movimentação registrada.');
+      }
+      closeTransactionModal();
       await load();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Não foi possível salvar.');
@@ -200,13 +221,13 @@ export default function PersonalPage() {
           </section>
 
           <section className="quick-actions">
-            <button className="btn primary" onClick={() => setModalType('INCOME')}>
+            <button className="btn primary" onClick={() => openCreate('INCOME')}>
               + Entrada
             </button>
-            <button className="btn danger" onClick={() => setModalType('EXPENSE')}>
+            <button className="btn danger" onClick={() => openCreate('EXPENSE')}>
               − Saída
             </button>
-            <button className="btn invest" onClick={() => setModalType('INVESTMENT')}>
+            <button className="btn invest" onClick={() => openCreate('INVESTMENT')}>
               ◎ Investir
             </button>
           </section>
@@ -229,7 +250,7 @@ export default function PersonalPage() {
                   <h2>Últimas movimentações</h2>
                 </div>
               </div>
-              <PersonalTransactionList items={dashboard.recentTransactions} onDelete={setToDeleteTx} />
+              <PersonalTransactionList items={dashboard.recentTransactions} onEdit={openEdit} onDelete={setToDeleteTx} />
             </article>
           </section>
 
@@ -286,9 +307,10 @@ export default function PersonalPage() {
       <PersonalTransactionFormModal
         open={modalType !== null}
         categories={categories}
+        initial={editingTx}
         defaultType={modalType}
-        onCancel={() => setModalType(null)}
-        onSubmit={handleCreateTransaction}
+        onCancel={closeTransactionModal}
+        onSubmit={handleSubmitTransaction}
         submitting={submitting}
       />
 

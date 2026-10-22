@@ -115,6 +115,24 @@ export const personalTransactionInputSchema = z
     }
   });
 
+// Editar um lançamento pessoal (inclusive uma ocorrência de gasto fixo ou
+// uma parcela isolada) nunca recalcula parcelamento/recorrência — só os
+// campos do próprio registro. Por isso aceita os três expenseKind e não
+// exige `installments`.
+export const personalTransactionUpdateSchema = z.object({
+  type: z.enum(['INCOME', 'EXPENSE', 'INVESTMENT'], { errorMap: () => ({ message: 'Tipo inválido' }) }),
+  expenseKind: z.enum(['NORMAL', 'FIXED', 'INSTALLMENT']).optional(),
+  amountCents: z
+    .number({ invalid_type_error: 'Valor é obrigatório' })
+    .int('Valor deve ser um inteiro de centavos')
+    .positive('Valor deve ser maior que zero'),
+  categoryId: z.number({ invalid_type_error: 'Categoria é obrigatória' }).int().positive(),
+  description: z.string().trim().min(1, 'Descrição é obrigatória'),
+  transactionDate: z
+    .string()
+    .refine(isValidDate, { message: 'Data inválida, use o formato YYYY-MM-DD' }),
+});
+
 export const personalTransactionQuerySchema = z.object({
   month: z.string().refine(isValidMonth, { message: 'Mês inválido, use YYYY-MM' }).optional(),
   type: z.enum(['INCOME', 'EXPENSE', 'INVESTMENT']).optional(),

@@ -480,6 +480,11 @@ main {
   gap: 4px;
 }
 
+.personal-tx-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .personal-tx-end .link-btn {
   font-size: 11px;
   padding: 0;

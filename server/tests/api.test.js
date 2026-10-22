@@ -409,20 +409,20 @@ describe('Módulo pessoal — investimento separado do saldo pessoal', () => {
 });
 
 describe('Módulo pessoal — gasto parcelado', () => {
-  it('divide o valor total pela quantidade de parcelas, uma por mês', async () => {
+  it('lança o valor de cada parcela (não o total) uma vez por mês', async () => {
     const agent = await loginAs('pessoa2', 'outra-senha-456');
 
     const created = await agent.post(`/api/personal/${users.pessoa2.id}/transactions`).send({
       type: 'EXPENSE',
       expenseKind: 'INSTALLMENT',
-      amountCents: 1000, // R$10,00 em 3x -> 333+333+334
+      amountCents: 1000, // R$10,00 por parcela, em 3x
       installments: 3,
       categoryId: categories.lazer.id,
       description: 'Compra parcelada',
       transactionDate: '2026-10-10',
     });
     expect(created.status).toBe(201);
-    expect(created.body.amountCents).toBe(333);
+    expect(created.body.amountCents).toBe(1000);
     expect(created.body.installmentTotal).toBe(3);
 
     const out = await agent.get(`/api/personal/${users.pessoa2.id}/transactions?month=2026-10`);
@@ -433,10 +433,30 @@ describe('Módulo pessoal — gasto parcelado', () => {
     const parcela2 = nov.body.items.find((t) => t.description.includes('(2/3)'));
     const parcela3 = dez.body.items.find((t) => t.description.includes('(3/3)'));
 
-    expect(parcela1.amountCents).toBe(333);
-    expect(parcela2.amountCents).toBe(333);
-    expect(parcela3.amountCents).toBe(334); // resto da divisão vai na última parcela
-    expect(parcela1.amountCents + parcela2.amountCents + parcela3.amountCents).toBe(1000);
+    expect(parcela1.amountCents).toBe(1000);
+    expect(parcela2.amountCents).toBe(1000);
+    expect(parcela3.amountCents).toBe(1000);
+  });
+
+  it('editar uma parcela altera só aquela ocorrência', async () => {
+    const agent = await loginAs('pessoa2', 'outra-senha-456');
+    const out = await agent.get(`/api/personal/${users.pessoa2.id}/transactions?month=2026-10`);
+    const parcela1 = out.body.items.find((t) => t.description.includes('(1/3)'));
+
+    const edited = await agent.put(`/api/personal/${users.pessoa2.id}/transactions/${parcela1.id}`).send({
+      type: 'EXPENSE',
+      expenseKind: 'INSTALLMENT',
+      amountCents: 1500,
+      categoryId: categories.lazer.id,
+      description: 'Compra parcelada (1/3) ajustada',
+      transactionDate: '2026-10-10',
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.body.amountCents).toBe(1500);
+
+    const nov = await agent.get(`/api/personal/${users.pessoa2.id}/transactions?month=2026-11`);
+    const parcela2 = nov.body.items.find((t) => t.description.includes('(2/3)'));
+    expect(parcela2.amountCents).toBe(1000); // outras parcelas continuam intactas
   });
 });
 
@@ -465,6 +485,27 @@ describe('Módulo pessoal — gasto fixo', () => {
     // Consultar de novo não duplica.
     const again = await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2027-03`);
     expect(again.body.items.filter((t) => t.description === 'Streaming').length).toBe(1);
+  });
+
+  it('editar uma ocorrência de gasto fixo altera só aquele mês', async () => {
+    const agent = await loginAs('rafael', 'senha-forte-123');
+    const out = await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2026-10`);
+    const occurrence = out.body.items.find((t) => t.description === 'Streaming');
+
+    const edited = await agent.put(`/api/personal/${users.rafael.id}/transactions/${occurrence.id}`).send({
+      type: 'EXPENSE',
+      expenseKind: 'FIXED',
+      amountCents: 5_990,
+      categoryId: categories.lazer.id,
+      description: 'Streaming (reajustado)',
+      transactionDate: '2026-10-10',
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.body.amountCents).toBe(5_990);
+
+    const future = await agent.get(`/api/personal/${users.rafael.id}/transactions?month=2027-04`);
+    const futureOccurrence = future.body.items.find((t) => t.description === 'Streaming');
+    expect(futureOccurrence.amountCents).toBe(4_990); // meses seguintes continuam com o valor original
   });
 
   it('pausar o gasto fixo impede novas ocorrências, mas preserva as já geradas', async () => {

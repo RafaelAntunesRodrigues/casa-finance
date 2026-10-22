@@ -30,14 +30,6 @@ const BASE_SELECT = `
   JOIN users o ON o.id = t.owner_id
 `;
 
-function distributeCents(totalCents, count) {
-  const base = Math.floor(totalCents / count);
-  const remainder = totalCents - base * count;
-  const amounts = new Array(count).fill(base);
-  amounts[count - 1] += remainder;
-  return amounts;
-}
-
 function addMonths(dateStr, offset) {
   const [y, m, d] = dateStr.split('-').map(Number);
   const totalMonths = y * 12 + (m - 1) + offset;
@@ -137,8 +129,9 @@ export function getPersonalTransactionById(id) {
   return db.prepare(`${BASE_SELECT} WHERE t.id = ?`).get(id);
 }
 
+// amountCents aqui é o valor de CADA parcela (não o total da compra) — cada
+// linha gerada usa o mesmo valor, sem nenhuma divisão/rateio.
 function createInstallmentExpense({ ownerId, amountCents, installments, categoryId, description, transactionDate, createdBy }) {
-  const amounts = distributeCents(amountCents, installments);
   const groupId = crypto.randomUUID();
   const insert = db.prepare(
     `INSERT INTO personal_transactions
@@ -154,7 +147,7 @@ function createInstallmentExpense({ ownerId, amountCents, installments, category
     for (let i = 0; i < installments; i += 1) {
       const info = insert.run({
         ownerId,
-        amountCents: amounts[i],
+        amountCents,
         categoryId,
         description: `${description} (${i + 1}/${installments})`,
         transactionDate: addMonths(transactionDate, i),

@@ -16,6 +16,7 @@ import {
   personalFixedTemplateStatusSchema,
   personalTransactionInputSchema,
   personalTransactionQuerySchema,
+  personalTransactionUpdateSchema,
 } from '../validation/schemas.js';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -37,7 +38,7 @@ export const create = asyncHandler(async (req, res) => {
 
 export const update = asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
-  const payload = parseOrThrow(personalTransactionInputSchema, req.body, ValidationError);
+  const payload = parseOrThrow(personalTransactionUpdateSchema, req.body, ValidationError);
   res.json(updatePersonalTransaction(id, payload));
 });
 

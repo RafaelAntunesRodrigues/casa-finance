@@ -1,31 +1,48 @@
 import { useEffect, useState } from 'react';
-import { brlInputToCents } from '../utils/money.js';
+import { brlInputToCents, centsToInputString } from '../utils/money.js';
 import { todayISO } from '../utils/date.js';
 
-const EMPTY_FORM = {
-  type: 'EXPENSE',
-  expenseKind: 'NORMAL',
-  amount: '',
-  installments: '2',
-  transactionDate: todayISO(),
-  categoryId: '',
-  description: '',
-};
+function buildEmptyForm(defaultType) {
+  return {
+    type: defaultType || 'EXPENSE',
+    expenseKind: 'NORMAL',
+    amount: '',
+    installments: '2',
+    transactionDate: todayISO(),
+    categoryId: '',
+    description: '',
+  };
+}
 
 const TYPE_LABEL = { INCOME: 'Entrada', EXPENSE: 'Saída', INVESTMENT: 'Investimento' };
+const KIND_NOTE = { FIXED: 'Gasto fixo (edita só esta ocorrência)', INSTALLMENT: 'Parcela (edita só esta parcela)' };
 
-export default function PersonalTransactionFormModal({ open, categories, defaultType, onCancel, onSubmit, submitting }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+export default function PersonalTransactionFormModal({ open, categories, initial, defaultType, onCancel, onSubmit, submitting }) {
+  const [form, setForm] = useState(buildEmptyForm());
   const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     if (!open) return;
-    setForm({ ...EMPTY_FORM, type: defaultType || EMPTY_FORM.type });
+    if (initial) {
+      setForm({
+        type: initial.type,
+        expenseKind: initial.expenseKind || 'NORMAL',
+        amount: centsToInputString(initial.amountCents),
+        installments: '2',
+        transactionDate: initial.transactionDate,
+        categoryId: String(initial.categoryId),
+        description: initial.description,
+      });
+    } else {
+      setForm(buildEmptyForm(defaultType));
+    }
     setFieldErrors({});
-  }, [open, defaultType]);
+  }, [open, initial, defaultType]);
 
   if (!open) return null;
 
+  const isEditing = !!initial;
+  const isInstallmentForm = !isEditing && form.type === 'EXPENSE' && form.expenseKind === 'INSTALLMENT';
   const availableCategories = categories.filter((c) => c.kind === form.type || c.kind === 'BOTH');
 
   function update(field, value) {
@@ -41,7 +58,7 @@ export default function PersonalTransactionFormModal({ open, categories, default
     if (!form.transactionDate) errors.transactionDate = 'Informe a data';
     if (!form.categoryId) errors.categoryId = 'Selecione uma categoria';
     if (!form.description.trim()) errors.description = 'Informe a descrição';
-    if (form.type === 'EXPENSE' && form.expenseKind === 'INSTALLMENT') {
+    if (isInstallmentForm) {
       const n = Number(form.installments);
       if (!Number.isInteger(n) || n < 2 || n > 60) {
         errors.installments = 'Use entre 2 e 60 parcelas';
@@ -65,7 +82,7 @@ export default function PersonalTransactionFormModal({ open, categories, default
     };
     if (form.type === 'EXPENSE') {
       payload.expenseKind = form.expenseKind;
-      if (form.expenseKind === 'INSTALLMENT') {
+      if (isInstallmentForm) {
         payload.installments = Number(form.installments);
       }
     }
@@ -77,7 +94,7 @@ export default function PersonalTransactionFormModal({ open, categories, default
       <section className="modal">
         <div className="modal-head">
           <div>
-            <span className="eyebrow">NOVA MOVIMENTAÇÃO PESSOAL</span>
+            <span className="eyebrow">{isEditing ? 'EDITAR' : 'NOVA'} MOVIMENTAÇÃO PESSOAL</span>
             <h2>{TYPE_LABEL[form.type]}</h2>
           </div>
           <button className="close" onClick={onCancel} aria-label="Fechar">
@@ -98,7 +115,11 @@ export default function PersonalTransactionFormModal({ open, categories, default
             </button>
           </div>
 
-          {form.type === 'EXPENSE' && (
+          {isEditing && form.type === 'EXPENSE' && KIND_NOTE[form.expenseKind] && (
+            <small className="field-hint">{KIND_NOTE[form.expenseKind]}</small>
+          )}
+
+          {!isEditing && form.type === 'EXPENSE' && (
             <div className="segmented" style={{ '--segments': 2 }}>
               <button
                 type="button"
@@ -118,7 +139,7 @@ export default function PersonalTransactionFormModal({ open, categories, default
           )}
 
           <label htmlFor="p-amount">
-            {form.expenseKind === 'INSTALLMENT' ? 'Valor total da compra' : 'Valor'}
+            {isInstallmentForm ? 'Valor de cada parcela' : 'Valor'}
             <div className="money-input">
               <span>R$</span>
               <input
@@ -132,7 +153,7 @@ export default function PersonalTransactionFormModal({ open, categories, default
             {fieldErrors.amount && <small className="field-error">{fieldErrors.amount}</small>}
           </label>
 
-          {form.type === 'EXPENSE' && form.expenseKind === 'INSTALLMENT' && (
+          {isInstallmentForm && (
             <label htmlFor="p-installments">
               Quantidade de parcelas
               <input
@@ -144,13 +165,15 @@ export default function PersonalTransactionFormModal({ open, categories, default
                 onChange={(e) => update('installments', e.target.value)}
               />
               {fieldErrors.installments && <small className="field-error">{fieldErrors.installments}</small>}
-              <small className="field-hint">Uma parcela é lançada por mês, a partir da data informada.</small>
+              <small className="field-hint">
+                Esse valor é lançado em todas as {form.installments || 'N'} parcelas, uma por mês a partir da data informada.
+              </small>
             </label>
           )}
 
           <div className="two-col">
             <label htmlFor="p-date">
-              Data {form.type === 'EXPENSE' && form.expenseKind === 'INSTALLMENT' ? '(1ª parcela)' : ''}
+              Data {isInstallmentForm ? '(1ª parcela)' : ''}
               <input
                 id="p-date"
                 type="date"
