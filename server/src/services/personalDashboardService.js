@@ -2,12 +2,6 @@ import { db } from '../db/index.js';
 import { monthRange } from '../utils/dates.js';
 import { ensureFixedOccurrences, sumPersonalByType } from './personalTransactionService.js';
 
-function getPersonalBalanceUpTo(ownerId, date) {
-  const income = sumPersonalByType('INCOME', { ownerId, upTo: date });
-  const expense = sumPersonalByType('EXPENSE', { ownerId, upTo: date });
-  return income - expense;
-}
-
 function previousMonth(month) {
   const [y, m] = month.split('-').map(Number);
   const totalMonths = y * 12 + (m - 1) - 1;
@@ -37,7 +31,9 @@ export function getPersonalDashboard(ownerId, month) {
   ensureFixedOccurrences(ownerId, month);
   const [start, end] = monthRange(month);
 
-  const balanceCents = getPersonalBalanceUpTo(ownerId, end);
+  // Diferente do saldo da casa, o pessoal NÃO acumula entre meses: a
+  // entrada de um mês só vale naquele mês, sem carregar saldo para o
+  // seguinte (pedido explícito do usuário).
   const incomeCents = sumPersonalByType('INCOME', { ownerId, start, end });
   const expenseCents = sumPersonalByType('EXPENSE', { ownerId, start, end });
   const investmentCents = sumPersonalByType('INVESTMENT', { ownerId, start, end });
@@ -73,7 +69,6 @@ export function getPersonalDashboard(ownerId, month) {
 
   return {
     month,
-    balanceCents,
     incomeCents,
     expenseCents,
     investmentCents,

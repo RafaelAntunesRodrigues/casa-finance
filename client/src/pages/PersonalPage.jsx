@@ -20,7 +20,9 @@ export default function PersonalPage() {
   const [month, setMonth] = useState(currentMonth());
   const [categories, setCategories] = useState([]);
   const [dashboard, setDashboard] = useState(null);
+  const [monthExpenses, setMonthExpenses] = useState([]);
   const [fixedTemplates, setFixedTemplates] = useState([]);
+  const [activityTab, setActivityTab] = useState('recent');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -49,14 +51,16 @@ export default function PersonalPage() {
     setLoading(true);
     setError('');
     try {
-      const [dash, cats, fixed] = await Promise.all([
+      const [dash, cats, fixed, expenses] = await Promise.all([
         api.get(`/personal/${ownerId}/dashboard`, { month }),
         api.get('/categories', { active: true, scope: 'PERSONAL' }),
         api.get(`/personal/${ownerId}/fixed-expenses`),
+        api.get(`/personal/${ownerId}/transactions`, { month, type: 'EXPENSE', pageSize: 200 }),
       ]);
       setDashboard(dash);
       setCategories(cats);
       setFixedTemplates(fixed);
+      setMonthExpenses(expenses.items);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Não foi possível carregar o módulo pessoal.');
     } finally {
@@ -179,12 +183,9 @@ export default function PersonalPage() {
         <>
           <section className="balance-card">
             <div>
-              <span>Saldo pessoal acumulado até {monthLabel(month)}</span>
-              <strong>{centsToBRL(dashboard.balanceCents)}</strong>
-              <small>
-                {dashboard.netCents >= 0 ? '+ ' : '− '}
-                {centsToBRL(Math.abs(dashboard.netCents))} no mês
-              </small>
+              <span>Saldo pessoal em {monthLabel(month)}</span>
+              <strong>{centsToBRL(dashboard.netCents)}</strong>
+              <small>Entradas e saídas valem só para este mês — não acumula de um mês para o outro.</small>
             </div>
             <div className="house-icon">◐</div>
           </section>
@@ -246,11 +247,23 @@ export default function PersonalPage() {
             <article className="panel recent">
               <div className="panel-title">
                 <div>
-                  <span className="eyebrow">RECENTES</span>
-                  <h2>Últimas movimentações</h2>
+                  <span className="eyebrow">{activityTab === 'recent' ? 'RECENTES' : monthLabel(month).toUpperCase()}</span>
+                  <h2>{activityTab === 'recent' ? 'Últimas movimentações' : 'Gastos do mês'}</h2>
                 </div>
               </div>
-              <PersonalTransactionList items={dashboard.recentTransactions} onEdit={openEdit} onDelete={setToDeleteTx} />
+              <div className="segmented" style={{ '--segments': 2, marginTop: 0, marginBottom: 16 }}>
+                <button type="button" className={activityTab === 'recent' ? 'selected' : ''} onClick={() => setActivityTab('recent')}>
+                  Recentes
+                </button>
+                <button type="button" className={activityTab === 'expenses' ? 'selected' : ''} onClick={() => setActivityTab('expenses')}>
+                  Gastos do mês
+                </button>
+              </div>
+              {activityTab === 'recent' ? (
+                <PersonalTransactionList items={dashboard.recentTransactions} onEdit={openEdit} onDelete={setToDeleteTx} />
+              ) : (
+                <PersonalTransactionList items={monthExpenses} onEdit={openEdit} onDelete={setToDeleteTx} />
+              )}
             </article>
           </section>
 

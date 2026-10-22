@@ -352,6 +352,19 @@ describe('Módulo pessoal — isolamento do saldo da casa', () => {
     expect(afterDash.body.balanceCents).toBe(balanceBefore);
   });
 
+  it('entrada pessoal não acumula para o mês seguinte (sem saldo acumulado)', async () => {
+    const agent = await loginAs('rafael', 'senha-forte-123');
+
+    // 'Salário outubro' (R$ 5.000,00) já foi lançado no teste anterior.
+    const octDash = await agent.get(`/api/personal/${users.rafael.id}/dashboard?month=2026-10`);
+    expect(octDash.body.incomeCents).toBe(500_000);
+    expect(octDash.body.netCents).toBe(500_000);
+
+    const novDash = await agent.get(`/api/personal/${users.rafael.id}/dashboard?month=2026-11`);
+    expect(novDash.body.incomeCents).toBe(0);
+    expect(novDash.body.netCents).toBe(0);
+  });
+
   it('é aberto: o outro usuário também vê os lançamentos pessoais', async () => {
     const agentB = await loginAs('pessoa2', 'outra-senha-456');
     const list = await agentB.get(`/api/personal/${users.rafael.id}/transactions?month=2026-10`);
@@ -401,7 +414,6 @@ describe('Módulo pessoal — investimento separado do saldo pessoal', () => {
     const personalAfter = await agent.get(`/api/personal/${users.rafael.id}/dashboard?month=2026-10`);
     expect(personalAfter.body.investmentCents).toBe(50_000);
     expect(personalAfter.body.netCents).toBe(netBefore); // investimento não mexe no líquido pessoal
-    expect(personalAfter.body.balanceCents).toBe(personalBefore.body.balanceCents); // nem no saldo pessoal
 
     const houseDash = await agent.get('/api/dashboard?month=2026-10');
     expect(houseDash.body.totalInvestedCents).toBe(totalInvestedBefore + 50_000);
