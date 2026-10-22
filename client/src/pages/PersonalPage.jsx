@@ -23,6 +23,7 @@ export default function PersonalPage() {
   const [monthExpenses, setMonthExpenses] = useState([]);
   const [fixedTemplates, setFixedTemplates] = useState([]);
   const [activityTab, setActivityTab] = useState('recent');
+  const [categoryFilter, setCategoryFilter] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -71,6 +72,15 @@ export default function PersonalPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    setCategoryFilter(null);
+  }, [ownerId, month]);
+
+  function selectCategory(item) {
+    setCategoryFilter({ id: item.categoryId, name: item.categoryName });
+    setActivityTab('expenses');
+  }
 
   function openCreate(type) {
     setEditingTx(null);
@@ -153,6 +163,7 @@ export default function PersonalPage() {
   }
 
   const activeMember = members.find((m) => m.id === ownerId);
+  const totalFixedCents = fixedTemplates.filter((f) => f.active).reduce((sum, f) => sum + f.amountCents, 0);
 
   return (
     <>
@@ -241,7 +252,11 @@ export default function PersonalPage() {
                   <h2>Gastos por categoria</h2>
                 </div>
               </div>
-              <CategoryBarList items={dashboard.expensesByCategory} />
+              <CategoryBarList
+                items={dashboard.expensesByCategory}
+                onSelect={selectCategory}
+                selectedId={activityTab === 'expenses' ? categoryFilter?.id : undefined}
+              />
             </article>
 
             <article className="panel recent">
@@ -252,17 +267,38 @@ export default function PersonalPage() {
                 </div>
               </div>
               <div className="segmented" style={{ '--segments': 2, marginTop: 0, marginBottom: 16 }}>
-                <button type="button" className={activityTab === 'recent' ? 'selected' : ''} onClick={() => setActivityTab('recent')}>
+                <button
+                  type="button"
+                  className={activityTab === 'recent' ? 'selected' : ''}
+                  onClick={() => {
+                    setActivityTab('recent');
+                    setCategoryFilter(null);
+                  }}
+                >
                   Recentes
                 </button>
                 <button type="button" className={activityTab === 'expenses' ? 'selected' : ''} onClick={() => setActivityTab('expenses')}>
                   Gastos do mês
                 </button>
               </div>
+
+              {activityTab === 'expenses' && categoryFilter && (
+                <div className="filter-chip">
+                  Filtrando por <strong>{categoryFilter.name}</strong>
+                  <button type="button" onClick={() => setCategoryFilter(null)} aria-label="Limpar filtro">
+                    ×
+                  </button>
+                </div>
+              )}
+
               {activityTab === 'recent' ? (
                 <PersonalTransactionList items={dashboard.recentTransactions} onEdit={openEdit} onDelete={setToDeleteTx} />
               ) : (
-                <PersonalTransactionList items={monthExpenses} onEdit={openEdit} onDelete={setToDeleteTx} />
+                <PersonalTransactionList
+                  items={categoryFilter ? monthExpenses.filter((t) => t.categoryId === categoryFilter.id) : monthExpenses}
+                  onEdit={openEdit}
+                  onDelete={setToDeleteTx}
+                />
               )}
             </article>
           </section>
@@ -287,6 +323,12 @@ export default function PersonalPage() {
                 + Novo
               </button>
             </div>
+
+            {fixedTemplates.length > 0 && (
+              <div className="fixed-total">
+                Total mensal em gastos fixos: <strong>{centsToBRL(totalFixedCents)}</strong>
+              </div>
+            )}
 
             {fixedTemplates.length === 0 ? (
               <EmptyState title="Nenhum gasto fixo cadastrado" description="Ex: assinaturas, aluguel, mensalidades." />

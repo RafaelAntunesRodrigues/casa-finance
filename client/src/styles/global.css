@@ -388,6 +388,30 @@ main {
   font-size: 13px;
 }
 
+button.chart-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.chart-row-clickable:hover {
+  background: var(--soft);
+}
+
+.chart-row-selected {
+  background: var(--soft);
+}
+
+.chart-row-selected span {
+  font-weight: 800;
+  color: var(--brand2);
+}
+
 .bar {
   height: 8px;
   border-radius: 20px;
@@ -763,6 +787,43 @@ main {
 
 .trend-figure.out {
   color: var(--out);
+}
+
+.fixed-total {
+  background: var(--soft);
+  color: var(--brand);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.fixed-total strong {
+  margin-left: 4px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--soft);
+  color: var(--brand);
+  border-radius: 20px;
+  padding: 6px 8px 6px 14px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.filter-chip button {
+  border: 0;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .fixed-list {
