@@ -7,11 +7,12 @@ Controle financeiro local e responsivo para duas pessoas acompanharem o dinheiro
 - **Banco:** SQLite (módulo nativo `node:sqlite` do Node.js — sem dependências de compilação)
 - **Autenticação:** login local com duas contas, senha com hash (bcrypt) e sessão `HttpOnly`
 
-O saldo nunca é um número editável: ele é sempre **derivado do histórico de movimentações** (`saldo = soma das entradas − soma das saídas − soma dos investimentos`). O dinheiro disponível inicial é cadastrado como uma entrada na categoria "Saldo inicial / Aporte".
+O saldo da casa nunca é um número editável: ele é sempre **derivado do histórico de movimentações da casa** (`saldo = soma das entradas − soma das saídas`). O dinheiro disponível inicial é cadastrado como uma entrada na categoria "Saldo inicial / Aporte".
 
-Além de Entradas e Saídas, o app tem:
-- **Investimento**: terceiro tipo de movimentação. Desconta do saldo (como uma saída), mas aparece separado em um card próprio no dashboard ("Investido no mês").
-- **Metas** (menu lateral): alvo de economia (ex. "guardar R$500 este mês", compara com o resultado líquido do mês) ou limite de gasto por categoria (ex. "no máximo R$300 em Decoração"). Pode repetir todo mês ou valer só para o mês em que foi criada.
+Além de Entradas e Saídas da casa, o app tem:
+- **Módulo pessoal** (menu lateral "Pessoal"): entradas, saídas e investimentos individuais de Rafael e Duda, totalmente isolados do saldo da casa. Aberto — os dois veem os lançamentos pessoais um do outro. Suporta **gasto fixo** (recorrente, gera lançamento automaticamente todo mês) e **gasto parcelado** (valor total dividido pela quantidade de parcelas, uma por mês). Tem seu próprio dashboard com saldo pessoal, resumo do mês e acompanhamento dos últimos 6 meses.
+- **Investimento**: só existe dentro do módulo pessoal de cada um. Não desconta do saldo da casa nem do saldo pessoal — é tratado como uma métrica separada. O dashboard da casa mostra o total investido pelos dois combinado.
+- **Metas** (menu lateral): alvo de economia ou limite de gasto por categoria, podendo ser do **casal** (combina o resultado da casa com o pessoal dos dois) ou de **uma pessoa específica** (compara só com o resultado pessoal dela). Pode repetir todo mês ou valer só para o mês em que foi criada.
 
 ---
 
